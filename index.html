@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>p2p-live</title>
+<meta name="description" content="Direct 1-to-1 peer-to-peer video calls in the browser.">
+<meta name="theme-color" content="#0e7c86">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="p2p-live">
 <style>
   :root {
     --bg: #e8edf1; --ink: #14212b; --muted: #5b6b78; --panel: #ffffff;
@@ -18,6 +26,8 @@
   body { background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   button, input { font: inherit; color: inherit; }
   .lobby { min-height: 100%; display: grid; grid-template-rows: 1fr auto; place-items: center; padding: 24px; position: relative; }
+  .btn.ghost { margin-top: 14px; background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .hint { margin: 14px 0 0; color: var(--muted); font-size: .88rem; }
   .foot { margin-top: 24px; font-size: .85rem; color: var(--muted); text-align: center; }
   .foot a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
   .foot a:hover { color: var(--ink); }
@@ -103,6 +113,8 @@
       <button class="btn" id="join" data-i18n="join"></button>
     </div>
     <p class="err" id="err" role="alert"></p>
+    <button class="btn ghost" id="installBtn" hidden data-i18n="install"></button>
+    <p class="hint" id="iosHint" hidden data-i18n="iosHint"></p>
   </div>
   <footer class="foot">
     <span data-i18n="footerOss"></span>
@@ -165,6 +177,7 @@
       room: 'Phòng', copy: 'Sao chép link', copied: 'Đã sao chép', copyPrompt: 'Sao chép link này:',
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
+      install: 'Cài đặt như ứng dụng', iosHint: 'Để cài trên iPhone/iPad: mở bằng Safari, bấm nút Chia sẻ rồi chọn “Thêm vào MH chính”.',
       shareLink: 'Chia sẻ link phòng', shareText: 'Tham gia cuộc gọi video của mình trên p2p-live',
       chat: 'Trò chuyện', chatPh: 'Nhập tin nhắn…', send: 'Gửi',
       footerOss: 'Mã nguồn mở trên GitHub:',
@@ -193,6 +206,7 @@
       room: 'Room', copy: 'Copy link', copied: 'Copied', copyPrompt: 'Copy this link:',
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
+      install: 'Install as an app', iosHint: 'To install on iPhone/iPad: open in Safari, tap Share, then “Add to Home Screen”.',
       shareLink: 'Share room link', shareText: 'Join my video call on p2p-live',
       chat: 'Chat', chatPh: 'Type a message…', send: 'Send',
       footerOss: 'Open source on GitHub:',
@@ -713,6 +727,35 @@
     updateShareButton();
   }
   $('shareBtn').onclick = startShare;
+
+  // ---------- Install as an app (PWA) ----------
+  const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let installEvent = null;
+
+  if ('serviceWorker' in navigator) {
+    // Needs HTTPS or localhost; fails quietly elsewhere (e.g. when opened from file://).
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    installEvent = e;
+    if (!isStandalone()) $('installBtn').hidden = false;
+  });
+  window.addEventListener('appinstalled', () => {
+    installEvent = null;
+    $('installBtn').hidden = true;
+    $('iosHint').hidden = true;
+  });
+  $('installBtn').onclick = async () => {
+    if (!installEvent) return;
+    installEvent.prompt();
+    try { await installEvent.userChoice; } catch (_) {}
+    installEvent = null;
+    $('installBtn').hidden = true;
+  };
+  // iOS Safari has no install prompt, so show the manual steps instead.
+  if (isIOS && !isStandalone()) $('iosHint').hidden = false;
 
   // ---------- Quick share of the room link (Web Share API: opens the system share sheet) ----------
   if (!navigator.share) $('shareLinkBtn').style.display = 'none'; // e.g. Firefox desktop; Copy link still works

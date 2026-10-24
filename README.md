@@ -2,7 +2,7 @@
 
 **Demo: https://p2p-live.pages.dev**
 
-A 1-to-1 video calling app that runs entirely in the browser and connects peers directly using WebRTC. The whole app is a single static `index.html` file with no backend, so it can be deployed to Cloudflare Pages, GitHub Pages, or any static hosting service.
+A 1-to-1 video calling app that runs entirely in the browser and connects peers directly using WebRTC. The app itself is a single static `index.html` with no backend, plus a few small files (manifest, service worker, icons) that make it installable. It can be deployed to Cloudflare Pages, GitHub Pages, or any static hosting service.
 
 ## Features
 
@@ -10,6 +10,7 @@ A 1-to-1 video calling app that runs entirely in the browser and connects peers 
 - One-click room creation, shared via link or room code
 - Mute/unmute mic, turn camera on/off, hang up
 - Switch camera, microphone and speaker during a call, even while connected
+- Installable as an app (PWA) on phones and desktops, with its own icon and window; the page opens fast, but calls still need an internet connection
 - Quick share button that opens the system share sheet with the room link (where the browser supports the Web Share API, mostly phones and tablets, plus Chrome/Edge/Safari on desktop); "Copy link" is always available
 - Text chat over the same peer-to-peer connection: messages go straight between the two browsers and are not stored anywhere, so history is lost when the page closes
 - Screen sharing on desktop browsers: your screen replaces your camera for the other person, who sees it unmirrored so shared text stays readable; stop from the button or the browser's own "Stop sharing" bar
@@ -100,6 +101,24 @@ During a call, click **Info** in the control bar. The panel shows the connection
 Released under the [MIT License](LICENSE). You are free to use, copy, modify, merge, publish, distribute, sublicense and sell this project, for commercial or non-commercial purposes, as long as the copyright notice and license text are kept in copies or substantial portions of it.
 
 The code is provided as is, without warranty. PeerJS is loaded from a CDN and is not part of this repository, it has its own license (also MIT).
+
+## Install as an app (PWA)
+
+Once the site is served over HTTPS, browsers that support installation offer it automatically:
+
+- **Chrome / Edge (desktop and Android):** click the **Install as an app** button on the start screen, or use the install icon in the address bar.
+- **iPhone / iPad:** open the site in Safari, tap Share, then **Add to Home Screen** (iOS has no install button, the start screen shows these steps).
+
+Project files that make this work:
+
+| File | Purpose |
+| --- | --- |
+| `manifest.webmanifest` | App name, colors, icons and display mode |
+| `sw.js` | Service worker that caches the app shell (pages load network-first, so updates show up right away) |
+| `icons/`, `icon.svg` | App icons, including a maskable icon for Android |
+| `_headers` | Cloudflare Pages headers so the service worker is always revalidated |
+
+The service worker never caches signaling traffic, so an installed app still needs internet to start a call. When you change the list of cached files in `sw.js`, bump `CACHE_VERSION`.
 
 ## Tech stack
 

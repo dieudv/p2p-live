@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "p2p-live",
+  "short_name": "p2p-live",
+  "description": "Direct 1-to-1 peer-to-peer video calls in the browser.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0d1419",
+  "theme_color": "#0e7c86",
+  "categories": ["communication", "social"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
