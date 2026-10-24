@@ -10,6 +10,7 @@ A 1-to-1 video calling app that runs entirely in the browser and connects peers 
 - One-click room creation, shared via link or room code
 - Mute/unmute mic, turn camera on/off, hang up
 - Switch camera, microphone and speaker during a call, even while connected
+- Quick front/back camera switch: a small button on your own video (shown when the device has more than one camera) flips between the front and rear cameras of a phone; the rear camera preview is never mirrored
 - Installable as an app (PWA) on phones and desktops, with its own icon and window; the page opens fast, but calls still need an internet connection
 - Invite card in the middle of the screen while you wait for the other person: it shows the room link with **Share** (system share sheet, where the Web Share API exists) and **Copy** buttons, and disappears as soon as they join
 - Text chat over the same peer-to-peer connection: messages go straight between the two browsers and are not stored anywhere, so history is lost when the page closes

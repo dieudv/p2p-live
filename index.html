@@ -139,6 +139,15 @@
   .invbtn.primary { background: var(--accent); border-color: transparent; color: var(--accent-ink); }
   .invbtn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
   .invbtn svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .flip { position: absolute; z-index: 2; right: 22px; bottom: calc(var(--lb) + 6px); width: 36px; height: 36px; border: 0; border-radius: 50%; padding: 0; display: grid; place-items: center; background: rgba(0,0,0,.55); color: #fff; cursor: pointer; }
+  .flip[hidden] { display: none; }
+  .flip:disabled { opacity: .5; cursor: progress; }
+  .flip:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  .flip svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .call.sharing .flip { display: none; }
+  .call.mirror.rear #local { transform: none; } /* the rear camera is never mirrored */
+  .toast { position: absolute; z-index: 7; left: 50%; bottom: calc(var(--lb) + 16px); transform: translateX(-50%); max-width: calc(100% - 32px); padding: 8px 14px; border-radius: 999px; background: rgba(16,26,34,.94); color: #fff; font-size: .9rem; text-align: center; }
+  .toast[hidden] { display: none; }
   .more-wrap { position: relative; }
   .menu { display: none; position: absolute; right: 0; bottom: calc(100% + 10px); z-index: 6; width: min(250px, 90vw); padding: 6px; flex-direction: column; gap: 2px; background: rgba(16,26,34,.96); border: 1px solid rgba(255,255,255,.18); border-radius: 12px; }
   .menu.on { display: flex; }
@@ -188,11 +197,13 @@
     </div>
   </div>
   <video id="local" autoplay playsinline muted></video>
+  <button class="flip" id="flipBtn" type="button" hidden data-i18n-label="flipCam"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 0 0-15.5-6.2L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15.5 6.2L21 16"/><path d="M21 21v-5h-5"/></svg></button>
   <div class="vu" id="vuRemote" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="vu" id="vuLocal" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="hand" id="handRemote" aria-hidden="true">✋</div>
   <div class="hand" id="handLocal" aria-hidden="true">✋</div>
   <div class="sr-only" id="live" role="status" aria-live="polite"></div>
+  <div class="toast" id="toast" role="status" hidden></div>
   <div class="status">
     <span class="pill" id="status"></span>
     <span class="pill" id="timer" role="timer" data-i18n-label="timerLbl" hidden>00:00</span>
@@ -257,6 +268,7 @@
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
       more: 'Thêm', sharingNow: 'đang chia sẻ màn hình',
+      flipCam: 'Đổi camera trước/sau', flipFail: 'Không đổi được camera.',
       inviteTitle: 'Đang chờ người kia vào', inviteSub: 'Gửi link này để mời họ vào phòng:', inviteLinkLbl: 'Link phòng', inviteShare: 'Chia sẻ', inviteCopy: 'Sao chép',
       react: 'Biểu tượng cảm xúc', handRaise: 'Giơ tay', handLower: 'Hạ tay', remoteHandUp: 'Người kia đã giơ tay', remoteHandDown: 'Người kia đã hạ tay',
       install: 'Cài đặt như ứng dụng', iosHint: 'Để cài trên iPhone/iPad: mở bằng Safari, bấm nút Chia sẻ rồi chọn “Thêm vào MH chính”.',
@@ -288,6 +300,7 @@
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
       more: 'More', sharingNow: 'sharing your screen',
+      flipCam: 'Switch front/back camera', flipFail: 'Could not switch camera.',
       inviteTitle: 'Waiting for the other person', inviteSub: 'Send them this link to join the room:', inviteLinkLbl: 'Room link', inviteShare: 'Share', inviteCopy: 'Copy',
       react: 'Reactions', handRaise: 'Raise hand', handLower: 'Lower hand', remoteHandUp: 'The other person raised their hand', remoteHandDown: 'The other person lowered their hand',
       install: 'Install as an app', iosHint: 'To install on iPhone/iPad: open in Safari, tap Share, then “Add to Home Screen”.',
@@ -414,6 +427,7 @@
     keepAwake();
     try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch (_) {}
     setLocalMeter();
+    updateRear();
     $('local').srcObject = stream;
     $('roomName').textContent = room;
     $('lobby').style.display = 'none';
@@ -533,24 +547,26 @@
     try { list = await navigator.mediaDevices.enumerateDevices(); } catch (_) { return; }
     const cur = kind => { const tr = stream.getTracks().find(x => x.kind === kind); return tr && tr.getSettings().deviceId; };
     fillSelect($('selCam'), list.filter(d => d.kind === 'videoinput'), 'Camera', cur('video'));
+    $('flipBtn').hidden = list.filter(d => d.kind === 'videoinput').length < 2;
     fillSelect($('selMic'), list.filter(d => d.kind === 'audioinput'), 'Mic', cur('audio'));
     const canSink = 'setSinkId' in HTMLMediaElement.prototype;
     $('spkRow').style.display = canSink ? '' : 'none';
     if (canSink) fillSelect($('selSpk'), list.filter(d => d.kind === 'audiooutput'), 'Speaker', sinkId);
   }
 
-  async function switchDevice(kind, id) {
+  async function switchDevice(kind, id, facing) {
     devErrKey = null;
     const old = stream.getTracks().find(x => x.kind === kind);
     const oldId = old && old.getSettings().deviceId;
     const wasEnabled = old ? old.enabled : true;
     // Stop the old track first: many phones cannot open two cameras at once.
     if (old) { old.stop(); stream.removeTrack(old); }
-    const open = devId => navigator.mediaDevices.getUserMedia(kind === 'video'
-      ? { video: { deviceId: { exact: devId }, width: 1280, height: 720 } }
-      : { audio: { deviceId: { exact: devId }, echoCancellation: true, noiseSuppression: true } });
+    // arg is a deviceId string, or { facing: 'user' | 'environment' } for a quick front/back switch
+    const open = arg => navigator.mediaDevices.getUserMedia(kind === 'video'
+      ? { video: { ...(typeof arg === 'string' ? { deviceId: { exact: arg } } : { facingMode: { exact: arg.facing } }), width: 1280, height: 720 } }
+      : { audio: { deviceId: { exact: arg }, echoCancellation: true, noiseSuppression: true } });
     let ns = null;
-    try { ns = await open(id); }
+    try { ns = await open(facing ? { facing } : id); }
     catch (_) {
       devErrKey = 'devErr';
       if (oldId) { try { ns = await open(oldId); } catch (_) {} }
@@ -560,6 +576,7 @@
       nt.enabled = wasEnabled;
       stream.addTrack(nt);
       if (kind === 'audio') setLocalMeter(); // the analyser must follow the new microphone
+      if (kind === 'video') updateRear();
       const pc = call && call.peerConnection;
       const sender = pc && pc.getSenders().find(x => x.track && x.track.kind === kind);
       if (sender && !(sharing && kind === 'video')) { try { await sender.replaceTrack(nt); } catch (_) {} }
@@ -567,7 +584,45 @@
       $('local').srcObject = sharingStream || stream;
     }
     render();
+    return !!ns && !devErrKey;
   }
+
+  // ---------- Quick front/back camera switch (button on your own video) ----------
+  let toastTimer = null, flipping = false;
+  function showToast(msg) {
+    clearTimeout(toastTimer);
+    $('toast').textContent = msg;
+    $('toast').hidden = false;
+    toastTimer = setTimeout(() => { $('toast').hidden = true; }, 2600);
+  }
+  function updateRear() {
+    const tr = stream && stream.getVideoTracks()[0];
+    const f = tr && tr.getSettings().facingMode;
+    $('call').classList.toggle('rear', f === 'environment');
+  }
+  async function flipCamera() {
+    if (flipping || !stream) return;
+    flipping = true;
+    $('flipBtn').disabled = true;
+    let ok = false;
+    try {
+      const cur = stream.getVideoTracks()[0];
+      const facing = cur && cur.getSettings().facingMode; // 'user' | 'environment' on phones, often missing on desktop
+      if (facing === 'user' || facing === 'environment') {
+        ok = await switchDevice('video', null, facing === 'user' ? 'environment' : 'user');
+      } else {
+        const cams = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+        if (cams.length > 1) {
+          const i = cams.findIndex(d => d.deviceId === (cur && cur.getSettings().deviceId));
+          ok = await switchDevice('video', cams[(i + 1) % cams.length].deviceId);
+        }
+      }
+    } catch (_) {}
+    flipping = false;
+    $('flipBtn').disabled = false;
+    if (!ok) showToast(t('flipFail'));
+  }
+  $('flipBtn').onclick = flipCamera;
 
   // ---------- Connection info ----------
   const fmtVideo = v => {
