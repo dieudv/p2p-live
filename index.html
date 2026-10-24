@@ -127,8 +127,17 @@
   }
   @keyframes fadeOnly { 0% { opacity: 0; } 10% { opacity: 1; } 100% { opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .fly { animation: fadeOnly 1.8s forwards; } .hand { transition: none; } }
+  .badge.dot { min-width: 10px; width: 10px; height: 10px; padding: 0; top: 2px; right: 2px; background: #ef4444; box-shadow: 0 0 0 2px rgba(16,26,34,.9); }
+  .more-wrap { position: relative; }
+  .menu { display: none; position: absolute; right: 0; bottom: calc(100% + 10px); z-index: 6; width: min(250px, 90vw); padding: 6px; flex-direction: column; gap: 2px; background: rgba(16,26,34,.96); border: 1px solid rgba(255,255,255,.18); border-radius: 12px; }
+  .menu.on { display: flex; }
+  .menu .ctl { display: flex; align-items: center; justify-content: flex-start; gap: 12px; width: 100%; height: auto; padding: 10px 12px; border-radius: 8px; background: transparent; color: #fff; font-weight: 500; font-size: .95rem; text-align: left; }
+  .menu .ctl:hover { background: rgba(255,255,255,.12); }
+  .menu .ctl[aria-pressed="true"], .menu .ctl[aria-expanded="true"] { background: rgba(255,255,255,.2); color: #fff; }
+  .menu .ctl svg { flex: none; }
   .ctl:disabled { opacity: .4; cursor: not-allowed; }
-  @media (max-width: 600px) { .call { --lw: 32vw; --lb: 144px; } .panel { bottom: 144px; } }
+  @media (max-width: 600px) { .call { --lw: 32vw; } }
+  @media (max-width: 359px) { .call { --lb: 144px; } .panel { bottom: 144px; } }
 </style>
 </head>
 <body>
@@ -198,11 +207,16 @@
     <button class="ctl" id="cam" aria-pressed="false"></button>
     <button class="ctl" id="chatBtn" aria-expanded="false" aria-controls="chatPanel" data-i18n-label="chat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="badge" id="chatBadge" hidden></span></button>
     <button class="ctl" id="reactBtn" aria-expanded="false" aria-controls="reactPanel" data-i18n-label="react"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg><span class="badge emo-dot" id="handDot" hidden>✋</span></button>
-    <button class="ctl" id="shareBtn" aria-pressed="false" disabled></button>
-    <button class="ctl" id="pipBtn" aria-pressed="false" disabled></button>
-    <button class="ctl" id="fsBtn" aria-pressed="false"></button>
-    <button class="ctl" id="devBtn" aria-expanded="false" aria-controls="devPanel" data-i18n-label="devices"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="9" cy="7" r="2.2"/><circle cx="15" cy="17" r="2.2"/></svg></button>
-    <button class="ctl" id="infoBtn" aria-expanded="false" aria-controls="infoPanel" data-i18n-label="info"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><path d="M12 8h.01"/></svg></button>
+    <div class="more-wrap">
+      <button class="ctl" id="moreBtn" aria-haspopup="true" aria-expanded="false" aria-controls="moreMenu" data-i18n-label="more"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg><span class="badge dot" id="moreDot" hidden></span></button>
+      <div class="menu" id="moreMenu" role="group" data-i18n-aria="more">
+        <button class="ctl" id="shareBtn" aria-pressed="false" disabled></button>
+        <button class="ctl" id="pipBtn" aria-pressed="false" disabled></button>
+        <button class="ctl" id="fsBtn" aria-pressed="false"></button>
+        <button class="ctl" id="devBtn" aria-expanded="false" aria-controls="devPanel"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="9" cy="7" r="2.2"/><circle cx="15" cy="17" r="2.2"/></svg><span data-i18n="devices"></span></button>
+        <button class="ctl" id="infoBtn" aria-expanded="false" aria-controls="infoPanel"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><path d="M12 8h.01"/></svg><span data-i18n="info"></span></button>
+      </div>
+    </div>
     <button class="ctl hang" id="hang" data-i18n-label="hang"><svg viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(135deg)"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
   </div>
 </section>
@@ -220,6 +234,7 @@
       room: 'Phòng', copy: 'Sao chép link', copied: 'Đã sao chép', copyPrompt: 'Sao chép link này:',
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
+      more: 'Thêm', sharingNow: 'đang chia sẻ màn hình',
       react: 'Biểu tượng cảm xúc', handRaise: 'Giơ tay', handLower: 'Hạ tay', remoteHandUp: 'Người kia đã giơ tay', remoteHandDown: 'Người kia đã hạ tay',
       install: 'Cài đặt như ứng dụng', iosHint: 'Để cài trên iPhone/iPad: mở bằng Safari, bấm nút Chia sẻ rồi chọn “Thêm vào MH chính”.',
       shareLink: 'Chia sẻ link phòng', shareText: 'Tham gia cuộc gọi video của mình trên P2P11',
@@ -250,6 +265,7 @@
       room: 'Room', copy: 'Copy link', copied: 'Copied', copyPrompt: 'Copy this link:',
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
+      more: 'More', sharingNow: 'sharing your screen',
       react: 'Reactions', handRaise: 'Raise hand', handLower: 'Lower hand', remoteHandUp: 'The other person raised their hand', remoteHandDown: 'The other person lowered their hand',
       install: 'Install as an app', iosHint: 'To install on iPhone/iPad: open in Safari, tap Share, then “Add to Home Screen”.',
       shareLink: 'Share room link', shareText: 'Join my video call on P2P11',
@@ -298,6 +314,11 @@
   const ico = name => '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[name] + '</svg>';
   function setLabeled(btn, iconName, label) {
     btn.innerHTML = ico(iconName);
+    if (btn.closest('.menu')) { // items inside the More menu show their name next to the icon
+      const span = document.createElement('span');
+      span.textContent = label;
+      btn.append(span);
+    }
     btn.setAttribute('aria-label', label);
     btn.title = label;
   }
@@ -604,7 +625,7 @@
   }
 
   function togglePanel(which) {
-    const map = { dev: [$('devPanel'), $('devBtn')], info: [$('infoPanel'), $('infoBtn')], chat: [$('chatPanel'), $('chatBtn')], react: [$('reactPanel'), $('reactBtn')] };
+    const map = { dev: [$('devPanel'), $('devBtn')], info: [$('infoPanel'), $('infoBtn')], chat: [$('chatPanel'), $('chatBtn')], react: [$('reactPanel'), $('reactBtn')], more: [$('moreMenu'), $('moreBtn')] };
     Object.entries(map).forEach(([k, [panel, btn]]) => {
       const on = k === which && !panel.classList.contains('on');
       panel.classList.toggle('on', on);
@@ -739,6 +760,11 @@
     $('shareBtn').disabled = !sharing && !startedAt; // needs a connected call
     updateChatState();
     updateReactUI();
+    // The share button lives in the More menu, so flag an active share on the menu button itself.
+    const moreLabel = t('more') + (sharing ? ', ' + t('sharingNow') : '');
+    $('moreBtn').setAttribute('aria-label', moreLabel);
+    $('moreBtn').title = moreLabel;
+    $('moreDot').hidden = !sharing;
   }
 
   async function startShare() {
@@ -996,6 +1022,19 @@
   });
   $('handBtn').onclick = () => setHand(!myHand, true);
   $('reactBtn').onclick = () => togglePanel('react');
+
+  // ---------- "More" menu (Picture-in-Picture, Fullscreen, Devices, Info) ----------
+  function closeMenu() {
+    $('moreMenu').classList.remove('on');
+    $('moreBtn').setAttribute('aria-expanded', 'false');
+  }
+  $('moreBtn').onclick = () => togglePanel('more');
+  // Click outside closes only the menu; other panels stay open.
+  document.addEventListener('click', e => {
+    if ($('moreMenu').classList.contains('on') && !e.target.closest('#moreMenu, #moreBtn')) closeMenu();
+  });
+  // Share screen, Picture-in-Picture and Fullscreen are one-shot actions, so the menu closes after them.
+  $('moreMenu').addEventListener('click', e => { if (e.target.closest('#shareBtn, #pipBtn, #fsBtn')) closeMenu(); });
 
   // ---------- Call timer and join/leave sounds ----------
   try { soundOn = localStorage.getItem('sound') !== '0'; } catch (_) {}
