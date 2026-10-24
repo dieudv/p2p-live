@@ -53,7 +53,7 @@
     <button class="btn" id="create" data-i18n="create"></button>
     <div class="or" data-i18n="or"></div>
     <div class="row">
-      <input id="code" autocomplete="off" maxlength="12" data-i18n-ph="codePh" data-i18n-aria="codePh">
+      <input id="code" autocomplete="off" maxlength="32" data-i18n-ph="codePh" data-i18n-aria="codePh">
       <button class="btn" id="join" data-i18n="join"></button>
     </div>
     <p class="err" id="err" role="alert"></p>
@@ -154,7 +154,7 @@
   let stream, peer, call, room;
 
   const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
-  const makeCode = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), n => alphabet[n % alphabet.length]).join('');
+  const makeCode = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), n => alphabet[n % alphabet.length]).join('');
   const clean = s => s.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 
   async function enter(code) {
