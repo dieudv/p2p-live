@@ -11,6 +11,7 @@ A 1-to-1 video calling app that runs entirely in the browser and connects peers 
 - Mute/unmute mic, turn camera on/off, hang up
 - Switch camera, microphone and speaker during a call, even while connected
 - Outgoing video quality: Auto, High (720p), Medium (480p), Low (360p) or Data saver (240p), chosen in the Devices panel; it caps the resolution, bitrate and frame rate you send, and the Info panel shows the effect
+- Drag and drop and resizing: move your own video and the Watch together window anywhere on the screen, and resize them by dragging a corner (mouse, touch, or the arrow keys and +/- when focused); double-click to put them back. The YouTube window cannot go below 240px wide, because YouTube requires its player area to be at least 200x200px and forbids drawing anything over the player, so its resize grip sits in a strip below the video
 - Quick front/back camera switch: a small button on your own video (shown when the device has more than one camera) flips between the front and rear cameras of a phone; the rear camera preview is never mirrored
 - Flashlight: with the rear camera, a small button on your own video turns the phone's flash on as a continuous light. It appears only where the browser exposes it (mostly Chrome/Edge on Android); iPhones and iPads do not allow websites to use the flash. The light turns off when you switch camera, turn the camera off or start sharing your screen
 - Installable as an app (PWA) on phones and desktops, with its own icon and window; the page opens fast, but calls still need an internet connection

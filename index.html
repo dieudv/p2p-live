@@ -47,7 +47,7 @@
   .call { display: none; position: fixed; inset: 0; background: var(--stage); }
   .call.on { display: block; }
   #remote { width: 100%; height: 100%; object-fit: contain; background: var(--stage); }
-  #local { position: absolute; right: 16px; bottom: var(--lb); width: var(--lw); height: auto; max-height: 40vh; object-fit: contain; border-radius: 12px; border: 2px solid rgba(255,255,255,.25); background: #000; }
+  #local { display: block; width: 100%; height: auto; max-height: 40vh; object-fit: contain; border-radius: 12px; border: 2px solid rgba(255,255,255,.25); background: #000; }
   .status { position: absolute; top: 16px; left: 16px; right: 16px; display: flex; gap: 10px; align-items: center; justify-content: space-between; color: #fff; }
   .pill { background: rgba(0,0,0,.55); padding: 8px 14px; border-radius: 999px; font-size: .92rem; }
   .pill button { background: none; border: 0; color: #fff; text-decoration: underline; cursor: pointer; padding: 0 0 0 8px; }
@@ -102,13 +102,13 @@
   .vu.on { opacity: 1; transform: none; }
   .vu i { display: block; width: 3px; height: 4px; border-radius: 2px; background: #fff; transition: height .1s linear; }
   #vuRemote { left: 16px; bottom: var(--lb); }
-  #vuLocal { right: calc(var(--lw) - 20px); bottom: calc(var(--lb) + 8px); }
+  #vuLocal { left: 8px; bottom: 8px; }
   @media (prefers-reduced-motion: reduce) { #mic::after, .vu, .vu i { transition: none; } }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .hand { position: absolute; z-index: 2; width: 28px; height: 28px; border-radius: 50%; background: #f5b301; box-shadow: 0 0 0 2px rgba(255,255,255,.85); display: grid; place-items: center; font-size: 15px; line-height: 1; opacity: 0; transform: scale(.8); transition: opacity .15s, transform .15s; pointer-events: none; }
   .hand.on { opacity: 1; transform: none; }
   #handRemote { left: 50px; bottom: var(--lb); }
-  #handLocal { right: calc(var(--lw) - 54px); bottom: calc(var(--lb) + 8px); }
+  #handLocal { left: 42px; bottom: 8px; }
   .badge.emo-dot { background: transparent; font-size: .95rem; line-height: 18px; min-width: 0; padding: 0; }
   .emojis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
   .emo { font-size: 1.5rem; line-height: 1.2; padding: 6px 0; border-radius: 10px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08); cursor: pointer; }
@@ -138,9 +138,9 @@
   .invbtn.primary { background: var(--accent); border-color: transparent; color: var(--accent-ink); }
   .invbtn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
   .invbtn svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .flip { position: absolute; z-index: 2; right: 22px; bottom: calc(var(--lb) + 6px); width: 36px; height: 36px; border: 0; border-radius: 50%; padding: 0; display: grid; place-items: center; background: rgba(0,0,0,.55); color: #fff; cursor: pointer; }
+  .flip { position: absolute; z-index: 2; right: 6px; bottom: 6px; width: 36px; height: 36px; border: 0; border-radius: 50%; padding: 0; display: grid; place-items: center; background: rgba(0,0,0,.55); color: #fff; cursor: pointer; }
   .flip[hidden] { display: none; }
-  .flip.torch { bottom: calc(var(--lb) + 50px); }
+  .flip.torch { bottom: 50px; }
   .flip[aria-pressed="true"] { background: #fff; color: #111; }
   .flip:disabled { opacity: .5; cursor: progress; }
   .flip:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
@@ -156,13 +156,24 @@
   .ythead button:hover { background: rgba(255,255,255,.14); }
   .ythead button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
   .ythead svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
-  .ytbox { aspect-ratio: 16 / 9; background: #000; }
+  .ytbox { aspect-ratio: 16 / 9; min-height: 200px; background: #000; } /* YouTube requires a viewport of at least 200x200 */
   .ytbox iframe { display: block; width: 100%; height: 100%; border: 0; }
   .ytinvite { position: absolute; z-index: 6; top: 72px; left: 50%; transform: translateX(-50%); width: min(380px, calc(100% - 32px)); }
   .ytinvite[hidden] { display: none; }
   .ytinvite .invcard { padding: 16px; }
   .ytinvite p { color: #fff; font-size: .95rem; margin: 0; }
   .panel .invbtn { width: 100%; }
+  .lbox { position: absolute; z-index: 2; right: 16px; bottom: var(--lb); width: var(--lw); touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+  .lbox.dragging, .ytcard.dragging .ythead { cursor: grabbing; }
+  .lbox:focus-visible, .ythead:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  .ythead { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .rz { position: absolute; z-index: 3; width: 28px; height: 28px; cursor: nwse-resize; touch-action: none; }
+  .rz svg { position: absolute; width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; }
+  .rz-tl { top: 0; left: 0; background: rgba(0,0,0,.45); border-radius: 12px 0 10px 0; }
+  .rz-tl svg { top: 4px; left: 4px; }
+  .ytfoot { position: relative; height: 18px; }
+  .rz-br { right: 0; bottom: 0; width: 28px; height: 18px; }
+  .rz-br svg { right: 4px; bottom: 1px; opacity: .8; }
   .more-wrap { position: relative; }
   .menu { display: none; position: absolute; right: 0; bottom: calc(100% + 10px); z-index: 6; width: min(250px, 90vw); padding: 6px; flex-direction: column; gap: 2px; background: rgba(16,26,34,.96); border: 1px solid rgba(255,255,255,.18); border-radius: 12px; }
   .menu.on { display: flex; }
@@ -212,8 +223,9 @@
     </div>
   </div>
   <div class="ytcard" id="ytCard" hidden>
-    <div class="ythead"><span data-i18n="ytTitle"></span><button id="ytClose" type="button" data-i18n-label="ytClose"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="ythead" id="ytHead" tabindex="0" role="group" data-i18n-aria="dragHintYt"><span data-i18n="ytTitle"></span><button id="ytClose" type="button" data-i18n-label="ytClose"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="ytbox" id="ytBox"><div id="ytFrame"></div></div>
+    <div class="ytfoot"><span class="rz rz-br" id="ytGrip" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 12L12 20M20 4L4 20"/></svg></span></div>
   </div>
   <div class="ytinvite" id="ytInvite" hidden>
     <div class="invcard" role="alertdialog" aria-labelledby="ytInviteText">
@@ -224,13 +236,16 @@
       </div>
     </div>
   </div>
-  <video id="local" autoplay playsinline muted></video>
-  <button class="flip" id="flipBtn" type="button" hidden data-i18n-label="flipCam"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 0 0-15.5-6.2L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15.5 6.2L21 16"/><path d="M21 21v-5h-5"/></svg></button>
-  <button class="flip torch" id="torchBtn" type="button" hidden aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></button>
+  <div class="lbox" id="localBox" tabindex="0" role="group" data-i18n-aria="dragHint">
+    <video id="local" autoplay playsinline muted></video>
+    <span class="rz rz-tl" id="localGrip" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12L12 4M4 20L20 4"/></svg></span>
+    <button class="flip" id="flipBtn" type="button" hidden data-i18n-label="flipCam"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 0 0-15.5-6.2L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15.5 6.2L21 16"/><path d="M21 21v-5h-5"/></svg></button>
+    <button class="flip torch" id="torchBtn" type="button" hidden aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></button>
+    <div class="vu" id="vuLocal" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="hand" id="handLocal" aria-hidden="true">✋</div>
+  </div>
   <div class="vu" id="vuRemote" aria-hidden="true"><i></i><i></i><i></i></div>
-  <div class="vu" id="vuLocal" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="hand" id="handRemote" aria-hidden="true">✋</div>
-  <div class="hand" id="handLocal" aria-hidden="true">✋</div>
   <div class="sr-only" id="live" role="status" aria-live="polite"></div>
   <div class="toast" id="toast" role="status" hidden></div>
   <div class="status">
@@ -307,6 +322,7 @@
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
       more: 'Thêm', sharingNow: 'đang chia sẻ màn hình',
+      dragHint: 'Video của bạn. Kéo để di chuyển, kéo góc trên bên trái để đổi kích thước, hoặc dùng phím mũi tên và +/-. Nhấp đúp để đặt lại.', dragHintYt: 'Khung nghe chung. Kéo thanh tiêu đề để di chuyển, kéo góc dưới bên phải để đổi kích thước, hoặc dùng phím mũi tên và +/-. Nhấp đúp để đặt lại.',
       torchOn: 'Bật đèn flash', torchOff: 'Tắt đèn flash', torchFail: 'Không bật được đèn flash.',
       ytTitle: 'Nghe chung YouTube', ytHint: 'Dán link YouTube. Hai bên cùng xem và nghe đồng bộ, âm thanh không đi qua cuộc gọi.', ytPh: 'Dán link YouTube', ytGo: 'Phát chung',
       ytBad: 'Link YouTube không hợp lệ.', ytLoadFail: 'Không tải được trình phát YouTube.', ytClose: 'Dừng nghe chung',
@@ -346,6 +362,7 @@
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
       more: 'More', sharingNow: 'sharing your screen',
+      dragHint: 'Your video. Drag to move it, drag the top-left corner to resize it, or use the arrow keys and +/-. Double-click to reset.', dragHintYt: 'Watch together window. Drag the title bar to move it, drag the bottom-right corner to resize it, or use the arrow keys and +/-. Double-click to reset.',
       torchOn: 'Turn flashlight on', torchOff: 'Turn flashlight off', torchFail: 'Could not turn the flashlight on.',
       ytTitle: 'Watch together', ytHint: 'Paste a YouTube link. You both watch in sync, and the sound does not go through the call.', ytPh: 'Paste a YouTube link', ytGo: 'Play together',
       ytBad: 'That is not a valid YouTube link.', ytLoadFail: 'Could not load the YouTube player.', ytClose: 'Stop watching together',
@@ -1270,6 +1287,12 @@
     if ($('call').querySelectorAll('.fly').length >= 24) return;
     const el = document.createElement('span');
     el.className = 'fly ' + (mine ? 'mine' : 'theirs');
+    if (mine) { // start from the top of your video box, wherever it has been dragged to
+      const lb = $('localBox').getBoundingClientRect(), cr = $('call').getBoundingClientRect();
+      el.style.right = 'auto';
+      el.style.left = Math.round(lb.left - cr.left + lb.width / 2 - 16) + 'px';
+      el.style.bottom = Math.round(cr.bottom - lb.top) + 'px';
+    }
     el.textContent = emoji;
     el.setAttribute('aria-hidden', 'true');
     el.style.setProperty('--dx', Math.round(Math.random() * 40 - 20) + 'px');
@@ -1511,6 +1534,118 @@
     }
   };
   $('ytDecline').onclick = () => { ytInvitePending = null; $('ytInvite').hidden = true; };
+
+  // ---------- Drag and drop: your own video and the Watch together window ----------
+  // Pointer events cover mouse, touch and pen. The arrow keys move the focused box too, and a
+  // double-click puts it back where it started. Positions are kept inside the call area.
+  const draggables = [];
+  function makeDraggable(box, handle) {
+    const area = () => $('call').getBoundingClientRect();
+    function place(left, top) {
+      const cr = area(), r = box.getBoundingClientRect();
+      left = Math.min(Math.max(0, left), Math.max(0, cr.width - r.width));
+      top = Math.min(Math.max(0, top), Math.max(0, cr.height - r.height));
+      Object.assign(box.style, { left: left + 'px', top: top + 'px', right: 'auto', bottom: 'auto' });
+    }
+    const here = () => { const r = box.getBoundingClientRect(), cr = area(); return { left: r.left - cr.left, top: r.top - cr.top }; };
+    let start = null, moved = false;
+
+    handle.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if (e.target.closest('button, input, select, a, .rz')) return; // buttons and resize grips do their own thing
+      start = { x: e.clientX, y: e.clientY, ...here() };
+      moved = false;
+      handle.setPointerCapture(e.pointerId);
+    });
+    handle.addEventListener('pointermove', e => {
+      if (!start) return;
+      const dx = e.clientX - start.x, dy = e.clientY - start.y;
+      if (!moved && Math.hypot(dx, dy) < 4) return; // a tiny wobble is a click, not a drag
+      moved = true;
+      box.classList.add('dragging');
+      place(start.left + dx, start.top + dy);
+    });
+    const end = () => { start = null; box.classList.remove('dragging'); };
+    handle.addEventListener('pointerup', end);
+    handle.addEventListener('pointercancel', end);
+
+    handle.addEventListener('keydown', e => {
+      if (e.target !== handle) return; // arrows inside the buttons are not ours
+      const step = e.shiftKey ? 48 : 16;
+      const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+      if (!d) return;
+      e.preventDefault();
+      const p = here();
+      place(p.left + d[0], p.top + d[1]);
+    });
+    handle.addEventListener('dblclick', e => {
+      if (e.target.closest('button, input, select, a')) return;
+      ['left', 'top', 'right', 'bottom', 'width'].forEach(k => { box.style[k] = ''; });
+    });
+    const reclamp = () => { // keep a moved or resized box on screen after a resize or rotation
+      if (!box.getClientRects().length) return;
+      const maxW = area().width - 16;
+      if (box.style.width && parseFloat(box.style.width) > maxW) box.style.width = maxW + 'px';
+      if (box.style.left) { const p = here(); place(p.left, p.top); }
+    };
+    box._clamp = reclamp;
+    draggables.push(reclamp);
+  }
+  makeDraggable($('localBox'), $('localBox'));
+  makeDraggable($('ytCard'), $('ytHead'));
+  // Resizing keeps the picture's proportions. A video box is anchored by the corner opposite to its grip.
+  // limits(callWidth) returns [min, max] width in px.
+  function makeResizable(box, grip, corner, limits, keyTarget) {
+    const area = () => $('call').getBoundingClientRect();
+    const snapshot = () => {
+      const r = box.getBoundingClientRect(), cr = area();
+      return { left: r.left - cr.left, top: r.top - cr.top, right: r.right - cr.left, bottom: r.bottom - cr.top, width: r.width, height: r.height, cw: cr.width, ch: cr.height };
+    };
+    function resize(st, want) {
+      const ratio = st.height / st.width;
+      const [lo, hi0] = limits(st.cw);
+      const hi = Math.min(hi0, corner === 'tl' ? Math.min(st.right, st.bottom / ratio) : Math.min(st.cw - st.left, (st.ch - st.top) / ratio));
+      const w = Math.min(Math.max(Math.min(lo, hi), want), hi); // on a tiny screen the maximum wins over the minimum
+      box.style.width = w + 'px';
+      const r = box.getBoundingClientRect();
+      Object.assign(box.style, {
+        left: (corner === 'tl' ? st.right - r.width : st.left) + 'px',
+        top: (corner === 'tl' ? st.bottom - r.height : st.top) + 'px',
+        right: 'auto', bottom: 'auto'
+      });
+      if (box._clamp) box._clamp();
+    }
+    let st = null, from = null;
+    grip.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault(); e.stopPropagation();
+      st = snapshot(); from = { x: e.clientX, y: e.clientY };
+      grip.setPointerCapture(e.pointerId);
+    });
+    grip.addEventListener('pointermove', e => {
+      if (!st) return;
+      const sign = corner === 'tl' ? -1 : 1, ratio = st.height / st.width;
+      const dx = (e.clientX - from.x) * sign, dy = (e.clientY - from.y) * sign;
+      resize(st, st.width + (dx + dy * ratio) / (1 + ratio * ratio)); // follow the drag along the box's diagonal
+    });
+    const end = () => { st = null; };
+    grip.addEventListener('pointerup', end);
+    grip.addEventListener('pointercancel', end);
+    keyTarget.addEventListener('keydown', e => {
+      if (e.target !== keyTarget) return;
+      const dir = (e.key === '+' || e.key === '=') ? 1 : (e.key === '-' || e.key === '_') ? -1 : 0;
+      if (!dir) return;
+      e.preventDefault();
+      const s0 = snapshot();
+      resize(s0, s0.width + dir * (e.shiftKey ? 48 : 16));
+    });
+  }
+  makeResizable($('localBox'), $('localGrip'), 'tl', cw => [72, Math.min(cw * 0.9, 480)], $('localBox'));
+  // Never below 240px wide: with the 200px-high player area that is YouTube's minimum viewport.
+  makeResizable($('ytCard'), $('ytGrip'), 'br', cw => [240, Math.min(cw - 32, 640)], $('ytHead'));
+  window.addEventListener('resize', () => draggables.forEach(f => f()));
+  document.addEventListener('fullscreenchange', () => draggables.forEach(f => f()));
+  document.addEventListener('webkitfullscreenchange', () => draggables.forEach(f => f()));
 
   // ---------- Call timer and join/leave sounds ----------
   try { soundOn = localStorage.getItem('sound') !== '0'; } catch (_) {}
