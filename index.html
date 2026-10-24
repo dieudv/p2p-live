@@ -147,6 +147,20 @@
   .call.mirror.rear #local { transform: none; } /* the rear camera is never mirrored */
   .toast { position: absolute; z-index: 7; left: 50%; bottom: calc(var(--lb) + 16px); transform: translateX(-50%); max-width: calc(100% - 32px); padding: 8px 14px; border-radius: 999px; background: rgba(16,26,34,.94); color: #fff; font-size: .9rem; text-align: center; }
   .toast[hidden] { display: none; }
+  .ytcard { position: absolute; z-index: 4; top: 80px; left: 16px; width: min(320px, calc(100% - 32px)); background: rgba(16,26,34,.94); border: 1px solid rgba(255,255,255,.18); border-radius: 12px; overflow: hidden; color: #fff; }
+  .ytcard[hidden] { display: none; }
+  .ythead { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 6px 6px 12px; font-size: .85rem; font-weight: 600; }
+  .ythead button { display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: #fff; cursor: pointer; }
+  .ythead button:hover { background: rgba(255,255,255,.14); }
+  .ythead button:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  .ythead svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+  .ytbox { aspect-ratio: 16 / 9; background: #000; }
+  .ytbox iframe { display: block; width: 100%; height: 100%; border: 0; }
+  .ytinvite { position: absolute; z-index: 6; top: 72px; left: 50%; transform: translateX(-50%); width: min(380px, calc(100% - 32px)); }
+  .ytinvite[hidden] { display: none; }
+  .ytinvite .invcard { padding: 16px; }
+  .ytinvite p { color: #fff; font-size: .95rem; margin: 0; }
+  .panel .invbtn { width: 100%; }
   .more-wrap { position: relative; }
   .menu { display: none; position: absolute; right: 0; bottom: calc(100% + 10px); z-index: 6; width: min(250px, 90vw); padding: 6px; flex-direction: column; gap: 2px; background: rgba(16,26,34,.96); border: 1px solid rgba(255,255,255,.18); border-radius: 12px; }
   .menu.on { display: flex; }
@@ -195,6 +209,19 @@
       </div>
     </div>
   </div>
+  <div class="ytcard" id="ytCard" hidden>
+    <div class="ythead"><span data-i18n="ytTitle"></span><button id="ytClose" type="button" data-i18n-label="ytClose"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="ytbox" id="ytBox"><div id="ytFrame"></div></div>
+  </div>
+  <div class="ytinvite" id="ytInvite" hidden>
+    <div class="invcard" role="alertdialog" aria-labelledby="ytInviteText">
+      <p id="ytInviteText"></p>
+      <div class="invrow">
+        <button class="invbtn primary" id="ytJoin" type="button" data-i18n="ytJoin"></button>
+        <button class="invbtn" id="ytDecline" type="button" data-i18n="ytDecline"></button>
+      </div>
+    </div>
+  </div>
   <video id="local" autoplay playsinline muted></video>
   <button class="flip" id="flipBtn" type="button" hidden data-i18n-label="flipCam"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 0 0-15.5-6.2L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15.5 6.2L21 16"/><path d="M21 21v-5h-5"/></svg></button>
   <div class="vu" id="vuRemote" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -227,6 +254,13 @@
       <button class="send" id="chatSend" disabled data-i18n-label="send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
     </div>
   </div>
+  <div class="panel" id="ytPanel" role="dialog" aria-labelledby="ytPanelTitle">
+    <h2 id="ytPanelTitle" data-i18n="ytTitle"></h2>
+    <p data-i18n="ytHint"></p>
+    <input id="ytUrl" type="url" autocomplete="off" inputmode="url" data-i18n-ph="ytPh" data-i18n-aria="ytPh">
+    <button class="invbtn primary" id="ytGo" type="button" style="margin-top:10px" data-i18n="ytGo"></button>
+    <p class="err" id="ytErr" role="alert"></p>
+  </div>
   <div class="panel" id="reactPanel" role="dialog" aria-labelledby="reactTitle">
     <h2 id="reactTitle" data-i18n="react"></h2>
     <div class="emojis" id="emojis"></div>
@@ -245,6 +279,7 @@
       <button class="ctl" id="moreBtn" aria-haspopup="true" aria-expanded="false" aria-controls="moreMenu" data-i18n-label="more"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg><span class="badge dot" id="moreDot" hidden></span></button>
       <div class="menu" id="moreMenu" role="group" data-i18n-aria="more">
         <button class="ctl" id="shareBtn" aria-pressed="false" disabled></button>
+        <button class="ctl" id="ytBtn" aria-expanded="false" aria-controls="ytPanel" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l6 3.5-6 3.5z"/></svg><span data-i18n="ytTitle"></span></button>
         <button class="ctl" id="pipBtn" aria-pressed="false" disabled></button>
         <button class="ctl" id="fsBtn" aria-pressed="false"></button>
         <button class="ctl" id="devBtn" aria-expanded="false" aria-controls="devPanel"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="9" cy="7" r="2.2"/><circle cx="15" cy="17" r="2.2"/></svg><span data-i18n="devices"></span></button>
@@ -269,6 +304,10 @@
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
       more: 'Thêm', sharingNow: 'đang chia sẻ màn hình',
+      ytTitle: 'Nghe chung YouTube', ytHint: 'Dán link YouTube. Hai bên cùng xem và nghe đồng bộ, âm thanh không đi qua cuộc gọi.', ytPh: 'Dán link YouTube', ytGo: 'Phát chung',
+      ytBad: 'Link YouTube không hợp lệ.', ytLoadFail: 'Không tải được trình phát YouTube.', ytClose: 'Dừng nghe chung',
+      ytInviteMsg: 'Người kia mời bạn nghe chung một video YouTube.', ytJoin: 'Tham gia', ytDecline: 'Bỏ qua', ytStopped: 'Người kia đã dừng nghe chung.',
+      ytError: 'Video này không phát được (có thể bị tắt nhúng hoặc bị chặn ở khu vực của bạn).',
       lblMuteShared: 'Khi chia sẻ tab, tắt tiếng tab đó trên máy tôi (tránh vọng)', shareAudioOn: 'Đang chia sẻ cả âm thanh của tab.',
       lblQuality: 'Chất lượng video gửi đi', qAuto: 'Tự động', qHigh: 'Cao (720p)', qMedium: 'Trung bình (480p)', qLow: 'Thấp (360p)', qSaver: 'Tiết kiệm dữ liệu (240p)',
       flipCam: 'Đổi camera trước/sau', flipFail: 'Không đổi được camera.',
@@ -303,6 +342,10 @@
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
       more: 'More', sharingNow: 'sharing your screen',
+      ytTitle: 'Watch together', ytHint: 'Paste a YouTube link. You both watch in sync, and the sound does not go through the call.', ytPh: 'Paste a YouTube link', ytGo: 'Play together',
+      ytBad: 'That is not a valid YouTube link.', ytLoadFail: 'Could not load the YouTube player.', ytClose: 'Stop watching together',
+      ytInviteMsg: 'The other person invited you to watch a YouTube video together.', ytJoin: 'Join', ytDecline: 'Dismiss', ytStopped: 'The other person stopped watching together.',
+      ytError: 'This video cannot be played (embedding may be disabled, or it is blocked in your region).',
       lblMuteShared: 'When sharing a tab, mute it on my device (avoids echo)', shareAudioOn: 'Tab audio is being shared too.',
       lblQuality: 'Outgoing video quality', qAuto: 'Auto', qHigh: 'High (720p)', qMedium: 'Medium (480p)', qLow: 'Low (360p)', qSaver: 'Data saver (240p)',
       flipCam: 'Switch front/back camera', flipFail: 'Could not switch camera.',
@@ -758,7 +801,7 @@
   }
 
   function togglePanel(which) {
-    const map = { dev: [$('devPanel'), $('devBtn')], info: [$('infoPanel'), $('infoBtn')], chat: [$('chatPanel'), $('chatBtn')], react: [$('reactPanel'), $('reactBtn')], more: [$('moreMenu'), $('moreBtn')] };
+    const map = { dev: [$('devPanel'), $('devBtn')], info: [$('infoPanel'), $('infoBtn')], chat: [$('chatPanel'), $('chatBtn')], react: [$('reactPanel'), $('reactBtn')], more: [$('moreMenu'), $('moreBtn')], yt: [$('ytPanel'), $('ytBtn')] };
     Object.entries(map).forEach(([k, [panel, btn]]) => {
       const on = k === which && !panel.classList.contains('on');
       panel.classList.toggle('on', on);
@@ -880,6 +923,7 @@
   function onCtl(d) {
     if (!d) return;
     if (d.type === 'chat') return onChat(d);
+    if (d.type === 'yt') return onYt(d);
     if (d.type === 'react') return onReact(d);
     if (d.type === 'hand') return onHand(d);
     if (d.type !== 'share') return;
@@ -899,6 +943,7 @@
     $('moreBtn').title = moreLabel;
     $('moreDot').hidden = !sharing;
     updateInvite();
+    updateYtState();
   }
 
   // Shared tab audio and the microphone are mixed into ONE audio track with Web Audio. That track replaces the
@@ -1255,6 +1300,179 @@
   // Share screen, Picture-in-Picture and Fullscreen are one-shot actions, so the menu closes after them.
   $('moreMenu').addEventListener('click', e => { if (e.target.closest('#shareBtn, #pipBtn, #fsBtn')) closeMenu(); });
 
+  // ---------- Watch together (YouTube) ----------
+  // Both people play the same video with YouTube's own embedded player. Only small commands travel over
+  // the P2P data channel (which video, play, pause, current time), never audio, so it works on phones,
+  // keeps full quality and cannot echo. The YouTube script is loaded only when someone uses this feature.
+  let ytPlayer = null, ytReady = false, ytId = null, ytActive = false, ytLeader = false;
+  let ytIgnoreUntil = 0, ytTickTimer = null, ytPending = null, ytApi = null, ytInvitePending = null;
+  const YT_ID = /^[A-Za-z0-9_-]{11}$/;
+
+  function parseYouTubeId(input) {
+    const v = (input || '').trim();
+    if (YT_ID.test(v)) return v;
+    let u;
+    try { u = new URL(v.includes('://') ? v : 'https://' + v); } catch (_) { return null; }
+    const host = u.hostname.replace(/^(www|m|music)\./, '');
+    let id = null;
+    if (host === 'youtu.be') id = u.pathname.slice(1).split('/')[0];
+    else if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+      if (u.pathname === '/watch') id = u.searchParams.get('v');
+      else { const m = u.pathname.match(/^\/(?:embed|shorts|live|v)\/([^/?#]+)/); if (m) id = m[1]; }
+    }
+    return id && YT_ID.test(id) ? id : null;
+  }
+
+  function loadYouTubeApi() {
+    if (ytApi) return ytApi;
+    ytApi = new Promise((resolve, reject) => {
+      if (window.YT && window.YT.Player) return resolve();
+      window.onYouTubeIframeAPIReady = resolve;
+      const sc = document.createElement('script');
+      sc.src = 'https://www.youtube.com/iframe_api';
+      sc.onerror = () => { ytApi = null; reject(new Error('load')); };
+      document.head.append(sc);
+      setTimeout(() => { if (!(window.YT && window.YT.Player)) { ytApi = null; reject(new Error('timeout')); } }, 10000);
+    });
+    return ytApi;
+  }
+
+  function updateYtState() {
+    $('ytBtn').disabled = !startedAt && !ytActive; // needs a connected call
+    $('ytBtn').setAttribute('aria-pressed', ytActive);
+  }
+  function resetYtFrame() {
+    $('ytBox').textContent = '';
+    const f = document.createElement('div');
+    f.id = 'ytFrame';
+    $('ytBox').append(f);
+  }
+  function stopYtTick() { clearInterval(ytTickTimer); ytTickTimer = null; }
+  function startYtTick() {
+    stopYtTick();
+    ytTickTimer = setInterval(() => {
+      // The person who last pressed something is the reference clock; the other side corrects its drift.
+      if (ytPlayer && ytReady && ytLeader && ytPlayer.getPlayerState() === 1) {
+        sendCtl({ type: 'yt', a: 'tick', t: ytPlayer.getCurrentTime() });
+      }
+    }, 5000);
+  }
+
+  async function startYt(id, at, playing) {
+    ytActive = true; ytId = id;
+    $('ytCard').hidden = false;
+    updateYtState();
+    try { await loadYouTubeApi(); }
+    catch (_) { closeYt(false); showToast(t('ytLoadFail')); return; }
+    if (!ytActive) return; // closed while the script was loading
+    if (ytPlayer) {
+      if (!ytReady) { ytPending = { id, at, playing }; return; }
+      ytIgnoreUntil = Date.now() + 1500;
+      const opts = { videoId: id, startSeconds: at };
+      if (playing) ytPlayer.loadVideoById(opts); else ytPlayer.cueVideoById(opts);
+      return;
+    }
+    if (!$('ytFrame')) resetYtFrame();
+    const vars = { autoplay: playing ? 1 : 0, start: Math.floor(at), playsinline: 1, rel: 0, modestbranding: 1 };
+    if (location.origin.startsWith('http')) vars.origin = location.origin;
+    ytIgnoreUntil = Date.now() + 3000;
+    ytPlayer = new window.YT.Player('ytFrame', {
+      host: 'https://www.youtube-nocookie.com', width: '100%', height: '100%', videoId: id, playerVars: vars,
+      events: { onReady: onYtReady, onStateChange: onYtState, onError: onYtError }
+    });
+  }
+  function onYtReady() {
+    ytReady = true;
+    if (ytPending) {
+      const p = ytPending; ytPending = null;
+      ytIgnoreUntil = Date.now() + 1500;
+      const opts = { videoId: p.id, startSeconds: p.at };
+      if (p.playing) ytPlayer.loadVideoById(opts); else ytPlayer.cueVideoById(opts);
+    }
+  }
+  function onYtError() { showToast(t('ytError')); }
+
+  // Local player changed state because of YOUR action: tell the other side.
+  function onYtState(e) {
+    if (!ytReady || Date.now() < ytIgnoreUntil) return; // ignore changes caused by commands we just applied
+    const st = e.data, at = ytPlayer.getCurrentTime();
+    if (st === 1) { ytLeader = true; sendCtl({ type: 'yt', a: 'play', t: at }); startYtTick(); }
+    else if (st === 2) { ytLeader = true; sendCtl({ type: 'yt', a: 'pause', t: at }); stopYtTick(); }
+    else if (st === 0) stopYtTick();
+  }
+
+  function closeYt(notify) {
+    const wasActive = ytActive;
+    ytActive = false; ytId = null; ytReady = false; ytPending = null; ytLeader = false;
+    stopYtTick();
+    if (ytPlayer) { try { ytPlayer.destroy(); } catch (_) {} ytPlayer = null; }
+    resetYtFrame();
+    $('ytCard').hidden = true;
+    if (notify && wasActive) sendCtl({ type: 'yt', a: 'stop' });
+    updateYtState();
+  }
+
+  // Commands from the other side (everything is validated: only an 11-character id and numbers are accepted).
+  function onYt(d) {
+    if (typeof d.a !== 'string') return;
+    const at = Number.isFinite(d.t) && d.t >= 0 && d.t < 1e6 ? d.t : 0;
+    if (d.a === 'load') {
+      if (typeof d.id !== 'string' || !YT_ID.test(d.id)) return;
+      const playing = d.playing !== false;
+      if (ytActive) { ytLeader = false; startYt(d.id, at, playing); return; }
+      ytInvitePending = { id: d.id, at, playing };
+      $('ytInviteText').textContent = t('ytInviteMsg');
+      $('ytInvite').hidden = false;
+      announce(t('ytInviteMsg'));
+      playTone([660, 880]);
+    } else if (d.a === 'need') {
+      ytResync(); // the other side just joined: send the current video and position
+    } else if (d.a === 'stop') {
+      $('ytInvite').hidden = true; ytInvitePending = null;
+      if (ytActive) { closeYt(false); showToast(t('ytStopped')); }
+    } else if (ytActive && ytReady && (d.a === 'play' || d.a === 'pause' || d.a === 'tick')) {
+      const cur = ytPlayer.getCurrentTime();
+      if (d.a === 'tick') {
+        if (ytPlayer.getPlayerState() === 1 && Math.abs(cur - at) > 2) { ytIgnoreUntil = Date.now() + 1200; ytPlayer.seekTo(at, true); }
+        return;
+      }
+      ytLeader = false;
+      ytIgnoreUntil = Date.now() + 1200;
+      if (Math.abs(cur - at) > 1.5) ytPlayer.seekTo(at, true);
+      if (d.a === 'play') ytPlayer.playVideo(); else ytPlayer.pauseVideo();
+    }
+  }
+  function ytResync() {
+    if (!ytActive || !ytReady || !ytId) return;
+    sendCtl({ type: 'yt', a: 'load', id: ytId, t: ytPlayer.getCurrentTime(), playing: ytPlayer.getPlayerState() === 1 });
+  }
+
+  function goYt() {
+    const id = parseYouTubeId($('ytUrl').value);
+    if (!id) { $('ytErr').textContent = t('ytBad'); return; }
+    $('ytErr').textContent = '';
+    $('ytUrl').value = '';
+    togglePanel(null);
+    ytLeader = true;
+    startYt(id, 0, true);
+    sendCtl({ type: 'yt', a: 'load', id, t: 0, playing: true });
+  }
+  $('ytBtn').onclick = () => { $('ytErr').textContent = ''; togglePanel('yt'); if ($('ytPanel').classList.contains('on')) setTimeout(() => $('ytUrl').focus(), 0); };
+  $('ytGo').onclick = goYt;
+  $('ytUrl').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); goYt(); } });
+  $('ytClose').onclick = () => closeYt(true);
+  // Joining is an explicit click on purpose: it asks before loading a third-party player, and the click lets the browser play sound.
+  $('ytJoin').onclick = () => {
+    const p = ytInvitePending; ytInvitePending = null;
+    $('ytInvite').hidden = true;
+    if (p) {
+      ytLeader = false;
+      startYt(p.id, p.at, p.playing);
+      sendCtl({ type: 'yt', a: 'need' }); // the video may have moved on while the invitation was waiting
+    }
+  };
+  $('ytDecline').onclick = () => { ytInvitePending = null; $('ytInvite').hidden = true; };
+
   // ---------- Call timer and join/leave sounds ----------
   try { soundOn = localStorage.getItem('sound') !== '0'; } catch (_) {}
   $('soundChk').checked = soundOn;
@@ -1294,6 +1512,7 @@
     startedAt = Date.now();
     updateShareButton();
     applyQuality();
+    setTimeout(ytResync, 600); // a session already running is re-offered to whoever just joined
     $('timer').hidden = false;
     tick();
     timerId = setInterval(tick, 1000);
@@ -1304,6 +1523,7 @@
     clearInterval(timerId);
     startedAt = null;
     updateShareButton();
+    $('ytInvite').hidden = true; ytInvitePending = null;
     $('timer').hidden = true;
     if ($('msgs').children.length) addSys(t('left'));
     playTone([660, 440]);
