@@ -10,6 +10,7 @@ A 1-to-1 video calling app that runs entirely in the browser and connects peers 
 - One-click room creation, shared via link or room code
 - Mute/unmute mic, turn camera on/off, hang up
 - Light/dark theme that follows the system setting, works on mobile
+- Bilingual Vietnamese/English interface, chosen from the browser language with a language switch button
 - No installation, no account, no build step
 
 ## How it works
@@ -65,7 +66,7 @@ Note: TURN credentials placed in a static file are publicly visible. For a serio
 ## Security and privacy
 
 - Anyone with the link or room code can join the room. The room code is the only secret, so share it over a private channel.
-- The room host currently auto-answers every incoming call and is not yet limited to one caller.
+- Each room admits only one guest. The host rejects a third person, who sees a "room is full" message. Anyone who enters before the intended guest can still get in with the room code, so keep the code private.
 - The public PeerJS signaling server can see both parties' IP addresses and connection details, but not the video or audio.
 - The two participants can learn each other's IP address. This is inherent to P2P unless TURN is used.
 
@@ -78,7 +79,6 @@ Note: TURN credentials placed in a static file are publicly visible. For a serio
 
 ## Roadmap
 
-- Host accepts only one caller and rejects a third party
 - Longer room codes and optional room passwords
 - Self-hosted signaling with Cloudflare Durable Objects (WebSocket)
 - Text chat and screen sharing

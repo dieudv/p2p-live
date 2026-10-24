@@ -87,6 +87,7 @@
       room: 'Phòng', copy: 'Sao chép link', copied: 'Đã sao chép', copyPrompt: 'Sao chép link này:',
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
+      full: 'Phòng đã đầy. Mỗi phòng chỉ cho phép 2 người.',
       needCode: 'Hãy nhập mã phòng.',
       noMedia: 'Không truy cập được camera/mic. Hãy cho phép quyền trong trình duyệt rồi thử lại.',
       creating: 'Đang tạo phòng…', waiting: 'Đang chờ người kia vào… Gửi link cho họ.',
@@ -102,6 +103,7 @@
       room: 'Room', copy: 'Copy link', copied: 'Copied', copyPrompt: 'Copy this link:',
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
+      full: 'This room is full. Only 2 people are allowed per room.',
       needCode: 'Please enter a room code.',
       noMedia: 'Could not access the camera/mic. Allow permission in your browser and try again.',
       creating: 'Creating room…', waiting: 'Waiting for the other person… Send them the link.',
@@ -152,6 +154,7 @@
   ] } };
 
   let stream, peer, call, room;
+  let guestId = null, guestConn = null; // host side: the one person allowed in
 
   const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
   const makeCode = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), n => alphabet[n % alphabet.length]).join('');
@@ -174,12 +177,32 @@
     startAsHost();
   }
 
-  // The first person into a room keeps its ID; if the ID is taken, become the guest and call it.
+  // The first person into a room keeps its ID. Anyone else first asks permission over a data
+  // channel: the host lets exactly one guest in and answers "full" to everyone after that.
   function startAsHost() {
     setStatus('creating');
     peer = new Peer(PREFIX + room, PEER_OPTS);
     peer.on('open', () => setStatus('waiting'));
-    peer.on('call', c => { c.answer(stream); bind(c); });
+    peer.on('connection', conn => {
+      conn.on('open', () => {
+        if (guestId && guestId !== conn.peer) {
+          conn.send({ type: 'full' });
+          setTimeout(() => conn.close(), 1000);
+          return;
+        }
+        guestId = conn.peer; guestConn = conn;
+        conn.send({ type: 'welcome' });
+      });
+      conn.on('close', () => {
+        if (guestConn === conn) { guestId = null; guestConn = null; }
+      });
+    });
+    peer.on('call', c => {
+      // Only the admitted guest may call, and only once.
+      if (c.peer !== guestId || (call && call.open)) { c.close(); return; }
+      c.answer(stream);
+      bind(c);
+    });
     peer.on('error', err => {
       if (err.type === 'unavailable-id') { peer.destroy(); startAsGuest(); }
       else fail(err);
@@ -189,7 +212,14 @@
   function startAsGuest() {
     setStatus('connecting');
     peer = new Peer(PEER_OPTS);
-    peer.on('open', () => bind(peer.call(PREFIX + room, stream)));
+    peer.on('open', () => {
+      const conn = peer.connect(PREFIX + room, { reliable: true });
+      conn.on('data', d => {
+        if (!d) return;
+        if (d.type === 'welcome' && !call) bind(peer.call(PREFIX + room, stream));
+        else if (d.type === 'full') { setStatus('full'); try { peer.destroy(); } catch (_) {} }
+      });
+    });
     peer.on('error', err => fail(err));
   }
 
