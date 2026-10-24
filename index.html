@@ -61,6 +61,8 @@
   .pill button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .call.mirror #local, .call.mirror #remote { transform: scaleX(-1); }
   .call.mirror.in-pip #remote { transform: none; }
+  .call.mirror.remote-share #remote { transform: none; }
+  .call.sharing #local { transform: none; }
   .status { flex-wrap: wrap; }
   #timer { font-variant-numeric: tabular-nums; }
   .panel label.check { display: flex; align-items: center; gap: 10px; color: #fff; }
@@ -110,6 +112,7 @@
   <div class="bar">
     <button class="ctl" id="mic" aria-pressed="false"></button>
     <button class="ctl" id="cam" aria-pressed="false"></button>
+    <button class="ctl" id="shareBtn" aria-pressed="false" disabled></button>
     <button class="ctl" id="pipBtn" aria-pressed="false" disabled></button>
     <button class="ctl" id="fsBtn" aria-pressed="false"></button>
     <button class="ctl" id="devBtn" aria-expanded="false" aria-controls="devPanel" data-i18n-label="devices"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="9" cy="7" r="2.2"/><circle cx="15" cy="17" r="2.2"/></svg></button>
@@ -131,6 +134,7 @@
       room: 'Phòng', copy: 'Sao chép link', copied: 'Đã sao chép', copyPrompt: 'Sao chép link này:',
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
+      share: 'Chia sẻ màn hình', shareStop: 'Dừng chia sẻ màn hình',
       lblSound: 'Âm báo khi có người vào hoặc rời', timerLbl: 'Thời gian cuộc gọi',
       lblMirror: 'Lật gương video (chỉ đổi cách bạn nhìn)',
       fullscreen: 'Toàn màn hình', exitFullscreen: 'Thoát toàn màn hình', pip: 'Cửa sổ nổi (PiP)', pipExit: 'Đóng cửa sổ nổi',
@@ -155,6 +159,7 @@
       room: 'Room', copy: 'Copy link', copied: 'Copied', copyPrompt: 'Copy this link:',
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
+      share: 'Share screen', shareStop: 'Stop sharing screen',
       lblSound: 'Sound when someone joins or leaves', timerLbl: 'Call duration',
       lblMirror: 'Mirror videos (only changes what you see)',
       fullscreen: 'Fullscreen', exitFullscreen: 'Exit fullscreen', pip: 'Picture-in-Picture', pipExit: 'Exit Picture-in-Picture',
@@ -190,7 +195,8 @@
     check: '<path d="M20 6L9 17l-5-5"/>',
     expand: '<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>',
     shrink: '<path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>',
-    pip: '<rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="12" width="6" height="4" rx="1"/>'
+    pip: '<rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="12" width="6" height="4" rx="1"/>',
+    screen: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/><path d="M12 12V8M9.5 10.5L12 8l2.5 2.5"/>'
   };
   const ico = name => '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[name] + '</svg>';
   function setLabeled(btn, iconName, label) {
@@ -228,6 +234,7 @@
     loadDevices();
     renderInfo();
     updateViewButtons();
+    updateShareButton();
   }
 
   $('lang').onclick = () => {
@@ -248,6 +255,7 @@
   let guestId = null, guestConn = null; // host side: the one person allowed in
   let statsTimer = null, prev = {}, info = null, devErrKey = null, sinkId = '';
   let startedAt = null, timerId = null, audioCtx = null, soundOn = true;
+  let sharing = false, sharingStream = null, remoteShare = false, gateConn = null;
 
   const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
   const makeCode = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), n => alphabet[n % alphabet.length]).join('');
@@ -281,6 +289,7 @@
     peer = new Peer(PREFIX + room, PEER_OPTS);
     peer.on('open', () => setStatus('waiting'));
     peer.on('connection', conn => {
+      conn.on('data', d => { if (conn === guestConn) onCtl(d); });
       conn.on('open', () => {
         if (guestId && guestId !== conn.peer) {
           conn.send({ type: 'full' });
@@ -311,10 +320,12 @@
     peer = new Peer(PEER_OPTS);
     peer.on('open', () => {
       const conn = peer.connect(PREFIX + room, { reliable: true });
+      gateConn = conn;
       conn.on('data', d => {
         if (!d) return;
         if (d.type === 'welcome' && !call) bind(peer.call(PREFIX + room, stream));
         else if (d.type === 'full') { setStatus('full'); try { peer.destroy(); } catch (_) {} }
+        else onCtl(d);
       });
     });
     peer.on('error', err => fail(err));
@@ -323,7 +334,7 @@
   function bind(c) {
     call = c; prev = {};
     c.on('stream', s => { $('remote').srcObject = s; setStatus('connected'); startTimer(); });
-    c.on('close', () => { $('remote').srcObject = null; setStatus('left'); stopTimer(); });
+    c.on('close', () => { $('remote').srcObject = null; setStatus('left'); stopTimer(); stopShare(false); onCtl({ type: 'share', on: false }); });
     c.on('error', fail);
   }
 
@@ -335,6 +346,7 @@
   function leave() {
     clearInterval(statsTimer);
     try { pipWin && pipWin.close(); } catch (_) {}
+    sharingStream && sharingStream.getTracks().forEach(x => x.stop());
     inCall = false;
     startedAt = null;
     clearInterval(timerId);
@@ -413,9 +425,9 @@
       stream.addTrack(nt);
       const pc = call && call.peerConnection;
       const sender = pc && pc.getSenders().find(x => x.track && x.track.kind === kind);
-      if (sender) { try { await sender.replaceTrack(nt); } catch (_) {} }
+      if (sender && !(sharing && kind === 'video')) { try { await sender.replaceTrack(nt); } catch (_) {} }
       $('local').srcObject = null;
-      $('local').srcObject = stream;
+      $('local').srcObject = sharingStream || stream;
     }
     render();
   }
@@ -549,7 +561,7 @@
       else if (remoteEl.webkitEnterFullscreen) remoteEl.webkitEnterFullscreen(); // iPhone: native video player
     } catch (_) {}
   };
-  const pipMirrorStyle = () => { if (pipWin) remoteEl.style.transform = mirrorOn ? 'scaleX(-1)' : 'none'; };
+  const pipMirrorStyle = () => { if (pipWin) remoteEl.style.transform = mirrorOn && !remoteShare ? 'scaleX(-1)' : 'none'; };
 
   // Moves the existing <video> into a small floating window. The browser just composites the same
   // video, so there is no extra decoding or pixel processing.
@@ -595,6 +607,66 @@
   };
   applyMirror();
 
+  // ---------- Screen sharing ----------
+  // The screen track replaces the camera track on the existing connection (no renegotiation).
+  // The other side is told over the data channel so it can switch off its mirror effect,
+  // otherwise shared text would read backwards.
+  const canShare = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+  if (!canShare) $('shareBtn').style.display = 'none';
+
+  function sendCtl(msg) {
+    const c = guestConn || gateConn;
+    try { if (c && c.open) c.send(msg); } catch (_) {}
+  }
+  function onCtl(d) {
+    if (!d || d.type !== 'share') return;
+    remoteShare = !!d.on;
+    $('call').classList.toggle('remote-share', remoteShare);
+    pipMirrorStyle();
+  }
+  function updateShareButton() {
+    setLabeled($('shareBtn'), 'screen', t(sharing ? 'shareStop' : 'share'));
+    $('shareBtn').setAttribute('aria-pressed', sharing);
+    $('shareBtn').disabled = !sharing && !startedAt; // needs a connected call
+  }
+
+  async function startShare() {
+    if (sharing) return stopShare(true);
+    const pc = call && call.peerConnection;
+    if (!pc) return;
+    let ds;
+    try { ds = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 15 } }, audio: false }); }
+    catch (_) { return; } // cancelled
+    const track = ds.getVideoTracks()[0];
+    const sender = pc.getSenders().find(x => x.track && x.track.kind === 'video');
+    if (!track || !sender) { ds.getTracks().forEach(x => x.stop()); return; }
+    try { track.contentHint = 'detail'; } catch (_) {} // favor sharp text over frame rate
+    try { await sender.replaceTrack(track); }
+    catch (_) { ds.getTracks().forEach(x => x.stop()); return; }
+    sharing = true; sharingStream = ds;
+    track.addEventListener('ended', () => stopShare(true)); // browser's own "Stop sharing" bar
+    $('local').srcObject = ds;
+    $('call').classList.add('sharing');
+    sendCtl({ type: 'share', on: true });
+    updateShareButton();
+  }
+
+  function stopShare(notify) {
+    if (!sharing) return;
+    sharing = false;
+    const ds = sharingStream; sharingStream = null;
+    if (ds) ds.getTracks().forEach(x => x.stop());
+    const cam = stream && stream.getVideoTracks()[0];
+    const pc = call && call.peerConnection;
+    const sender = pc && pc.getSenders().find(x => x.track && x.track.kind === 'video');
+    if (sender && cam) sender.replaceTrack(cam).catch(() => {});
+    $('local').srcObject = stream;
+    $('call').classList.remove('sharing');
+    if (notify) sendCtl({ type: 'share', on: false });
+    updateShareButton();
+  }
+  $('shareBtn').onclick = startShare;
+
   // ---------- Call timer and join/leave sounds ----------
   try { soundOn = localStorage.getItem('sound') !== '0'; } catch (_) {}
   $('soundChk').checked = soundOn;
@@ -632,6 +704,7 @@
   function startTimer() {
     if (startedAt) return; // the 'stream' event can fire more than once
     startedAt = Date.now();
+    updateShareButton();
     $('timer').hidden = false;
     tick();
     timerId = setInterval(tick, 1000);
@@ -641,6 +714,7 @@
     if (!startedAt) return;
     clearInterval(timerId);
     startedAt = null;
+    updateShareButton();
     $('timer').hidden = true;
     playTone([660, 440]);
   }
