@@ -1,9 +1,9 @@
-// Service worker for p2p-live.
+// Service worker for P2P11.
 // It only caches the app shell so the page opens fast and can be installed.
 // Calls still need the internet: WebRTC signaling goes to the PeerJS server, which is never cached here.
 // Bump CACHE_VERSION when you change the list of files below.
 const CACHE_VERSION = 'v1';
-const CACHE = 'p2p-live-' + CACHE_VERSION;
+const CACHE = 'p2p11-' + CACHE_VERSION;
 const PEERJS = 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'; // pinned, so safe to cache forever
 const CORE = [
   './', 'index.html', 'manifest.webmanifest', 'icon.svg',
@@ -22,7 +22,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter(k => k.startsWith('p2p-live-') && k !== CACHE).map(k => caches.delete(k)));
+    await Promise.all(keys.filter(k => (k.startsWith('p2p11-') || k.startsWith('p2p-live-')) && k !== CACHE).map(k => caches.delete(k)));
     await self.clients.claim();
   })());
 });

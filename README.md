@@ -1,6 +1,6 @@
-# p2p-live
+# P2P11
 
-**Demo: https://p2p-live.pages.dev**
+**Demo: https://p2p11.pages.dev**
 
 A 1-to-1 video calling app that runs entirely in the browser and connects peers directly using WebRTC. The app itself is a single static `index.html` with no backend, plus a few small files (manifest, service worker, icons) that make it installable. It can be deployed to Cloudflare Pages, GitHub Pages, or any static hosting service.
 
@@ -36,8 +36,8 @@ Media streams are always encrypted by WebRTC (DTLS-SRTP) and never pass through 
 Browsers only allow camera/mic access on HTTPS or `localhost`, so serve the files with a local static server:
 
 ```bash
-git clone https://github.com/dieudv/p2p-live.git
-cd p2p-live
+git clone https://github.com/dieudv/p2p11.git
+cd p2p11
 python3 -m http.server 8080
 ```
 
@@ -55,7 +55,7 @@ Open `http://localhost:8080` in two tabs (or two browsers) to try it.
 **Option 2: Connect GitHub**
 
 1. Push the source code to GitHub.
-2. Go to Workers & Pages → Create → Pages → Connect to Git and select the `p2p-live` repo.
+2. Go to Workers & Pages → Create → Pages → Connect to Git and select the `p2p11` repo.
 3. Leave Build command empty, set Build output directory to `/`, then Save and Deploy.
 
 After deploying, open the `*.pages.dev` link that Cloudflare gives you.

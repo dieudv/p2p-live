@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "p2p-live",
-  "short_name": "p2p-live",
+  "name": "P2P11",
+  "short_name": "P2P11",
   "description": "Direct 1-to-1 peer-to-peer video calls in the browser.",
   "start_url": "./",
   "scope": "./",

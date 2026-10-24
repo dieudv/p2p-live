@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>p2p-live</title>
+<title>P2P11</title>
 <meta name="description" content="Direct 1-to-1 peer-to-peer video calls in the browser.">
 <meta name="theme-color" content="#0e7c86">
 <link rel="manifest" href="manifest.webmanifest">
@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="p2p-live">
+<meta name="apple-mobile-web-app-title" content="P2P11">
 <style>
   :root {
     --bg: #e8edf1; --ink: #14212b; --muted: #5b6b78; --panel: #ffffff;
@@ -104,7 +104,7 @@
 <main class="lobby" id="lobby">
   <button class="lang" id="lang" type="button" aria-label="Language / Ngôn ngữ"></button>
   <div class="card">
-    <h1>p2p-live</h1>
+    <h1>P2P11</h1>
     <p class="sub" data-i18n="sub"></p>
     <button class="btn" id="create" data-i18n="create"></button>
     <div class="or" data-i18n="or"></div>
@@ -118,7 +118,7 @@
   </div>
   <footer class="foot">
     <span data-i18n="footerOss"></span>
-    <a href="https://github.com/dieudv/p2p-live" target="_blank" rel="noopener noreferrer">github.com/dieudv/p2p-live</a>
+    <a href="https://github.com/dieudv/p2p11" target="_blank" rel="noopener noreferrer">github.com/dieudv/p2p11</a>
   </footer>
 </main>
 
@@ -178,7 +178,7 @@
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
       install: 'Cài đặt như ứng dụng', iosHint: 'Để cài trên iPhone/iPad: mở bằng Safari, bấm nút Chia sẻ rồi chọn “Thêm vào MH chính”.',
-      shareLink: 'Chia sẻ link phòng', shareText: 'Tham gia cuộc gọi video của mình trên p2p-live',
+      shareLink: 'Chia sẻ link phòng', shareText: 'Tham gia cuộc gọi video của mình trên P2P11',
       chat: 'Trò chuyện', chatPh: 'Nhập tin nhắn…', send: 'Gửi',
       footerOss: 'Mã nguồn mở trên GitHub:',
       share: 'Chia sẻ màn hình', shareStop: 'Dừng chia sẻ màn hình',
@@ -207,7 +207,7 @@
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
       install: 'Install as an app', iosHint: 'To install on iPhone/iPad: open in Safari, tap Share, then “Add to Home Screen”.',
-      shareLink: 'Share room link', shareText: 'Join my video call on p2p-live',
+      shareLink: 'Share room link', shareText: 'Join my video call on P2P11',
       chat: 'Chat', chatPh: 'Type a message…', send: 'Send',
       footerOss: 'Open source on GitHub:',
       share: 'Share screen', shareStop: 'Stop sharing screen',
@@ -760,7 +760,7 @@
   // ---------- Quick share of the room link (Web Share API: opens the system share sheet) ----------
   if (!navigator.share) $('shareLinkBtn').style.display = 'none'; // e.g. Firefox desktop; Copy link still works
   $('shareLinkBtn').onclick = async () => {
-    try { await navigator.share({ title: 'p2p-live', text: t('shareText'), url: location.href }); }
+    try { await navigator.share({ title: 'P2P11', text: t('shareText'), url: location.href }); }
     catch (e) { if (e.name !== 'AbortError') $('copy').click(); } // share failed: fall back to copying the link
   };
 
