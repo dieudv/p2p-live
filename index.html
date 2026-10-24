@@ -33,7 +33,7 @@
   .call { display: none; position: fixed; inset: 0; background: var(--stage); }
   .call.on { display: block; }
   #remote { width: 100%; height: 100%; object-fit: contain; background: var(--stage); }
-  #local { position: absolute; right: 16px; bottom: 92px; width: min(28vw, 220px); aspect-ratio: 4/3; object-fit: cover; border-radius: 12px; border: 2px solid rgba(255,255,255,.25); background: #000; transform: scaleX(-1); }
+  #local { position: absolute; right: 16px; bottom: 92px; width: min(28vw, 220px); height: auto; max-height: 40vh; object-fit: contain; border-radius: 12px; border: 2px solid rgba(255,255,255,.25); background: #000; }
   .status { position: absolute; top: 16px; left: 16px; right: 16px; display: flex; gap: 10px; align-items: center; justify-content: space-between; color: #fff; }
   .pill { background: rgba(0,0,0,.55); padding: 8px 14px; border-radius: 999px; font-size: .92rem; }
   .pill button { background: none; border: 0; color: #fff; text-decoration: underline; cursor: pointer; padding: 0 0 0 8px; }
@@ -59,12 +59,14 @@
   .ctl svg { width: 22px; height: 22px; display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .pill button { display: inline-flex; vertical-align: middle; align-items: center; }
   .pill button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .call.mirror #local, .call.mirror #remote { transform: scaleX(-1); }
+  .call.mirror.in-pip #remote { transform: none; }
   .status { flex-wrap: wrap; }
   #timer { font-variant-numeric: tabular-nums; }
   .panel label.check { display: flex; align-items: center; gap: 10px; color: #fff; }
   .panel input[type="checkbox"] { flex: none; width: 18px; height: 18px; margin: 0; padding: 0; accent-color: var(--accent); }
   .ctl:disabled { opacity: .4; cursor: not-allowed; }
-  @media (max-width: 600px) { #local { bottom: 144px; } .panel { bottom: 144px; } }
+  @media (max-width: 600px) { #local { bottom: 144px; width: 32vw; } .panel { bottom: 144px; } }
 </style>
 </head>
 <body>
@@ -84,7 +86,7 @@
   </div>
 </main>
 
-<section class="call" id="call">
+<section class="call mirror" id="call">
   <video id="remote" autoplay playsinline></video>
   <video id="local" autoplay playsinline muted></video>
   <div class="status">
@@ -98,6 +100,7 @@
     <label><span data-i18n="lblMic"></span><select id="selMic"></select></label>
     <label id="spkRow"><span data-i18n="lblSpk"></span><select id="selSpk"></select></label>
     <label class="check"><input type="checkbox" id="soundChk"><span data-i18n="lblSound"></span></label>
+    <label class="check"><input type="checkbox" id="mirrorChk"><span data-i18n="lblMirror"></span></label>
     <p class="err" id="devErr" role="alert"></p>
   </div>
   <div class="panel" id="infoPanel" role="dialog" aria-labelledby="infoTitle">
@@ -129,6 +132,7 @@
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
       lblSound: 'Âm báo khi có người vào hoặc rời', timerLbl: 'Thời gian cuộc gọi',
+      lblMirror: 'Lật gương video (chỉ đổi cách bạn nhìn)',
       fullscreen: 'Toàn màn hình', exitFullscreen: 'Thoát toàn màn hình', pip: 'Cửa sổ nổi (PiP)', pipExit: 'Đóng cửa sổ nổi',
       full: 'Phòng đã đầy. Mỗi phòng chỉ cho phép 2 người.',
       devices: 'Thiết bị', info: 'Thông tin', lblCam: 'Camera', lblMic: 'Micro', lblSpk: 'Loa',
@@ -152,6 +156,7 @@
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
       lblSound: 'Sound when someone joins or leaves', timerLbl: 'Call duration',
+      lblMirror: 'Mirror videos (only changes what you see)',
       fullscreen: 'Fullscreen', exitFullscreen: 'Exit fullscreen', pip: 'Picture-in-Picture', pipExit: 'Exit Picture-in-Picture',
       full: 'This room is full. Only 2 people are allowed per room.',
       devices: 'Devices', info: 'Info', lblCam: 'Camera', lblMic: 'Microphone', lblSpk: 'Speaker',
@@ -329,6 +334,7 @@
 
   function leave() {
     clearInterval(statsTimer);
+    try { pipWin && pipWin.close(); } catch (_) {}
     inCall = false;
     startedAt = null;
     clearInterval(timerId);
@@ -516,7 +522,9 @@
   const remoteEl = $('remote');
   const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
   const canFs = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || 'webkitEnterFullscreen' in HTMLVideoElement.prototype);
-  const canPip = !!(document.pictureInPictureEnabled && !remoteEl.disablePictureInPicture);
+  const canDocPip = 'documentPictureInPicture' in window;
+  const canPip = canDocPip || !!(document.pictureInPictureEnabled && !remoteEl.disablePictureInPicture);
+  let pipWin = null;
   if (!canFs) $('fsBtn').style.display = 'none';
   if (!canPip) $('pipBtn').style.display = 'none';
 
@@ -524,7 +532,8 @@
     const fsOn = !!fsElement();
     setLabeled($('fsBtn'), fsOn ? 'shrink' : 'expand', t(fsOn ? 'exitFullscreen' : 'fullscreen'));
     $('fsBtn').setAttribute('aria-pressed', fsOn);
-    const pipOn = !!document.pictureInPictureElement;
+    const pipOn = !!document.pictureInPictureElement || !!pipWin;
+    $('call').classList.toggle('in-pip', document.pictureInPictureElement === remoteEl);
     setLabeled($('pipBtn'), 'pip', t(pipOn ? 'pipExit' : 'pip'));
     $('pipBtn').setAttribute('aria-pressed', pipOn);
     // Picture-in-Picture needs a playing remote video.
@@ -540,14 +549,51 @@
       else if (remoteEl.webkitEnterFullscreen) remoteEl.webkitEnterFullscreen(); // iPhone: native video player
     } catch (_) {}
   };
+  const pipMirrorStyle = () => { if (pipWin) remoteEl.style.transform = mirrorOn ? 'scaleX(-1)' : 'none'; };
+
+  // Moves the existing <video> into a small floating window. The browser just composites the same
+  // video, so there is no extra decoding or pixel processing.
+  async function openDocPip() {
+    const vw = remoteEl.videoWidth || 16, vh = remoteEl.videoHeight || 9;
+    const width = 360, height = Math.max(160, Math.min(640, Math.round(width * vh / vw)));
+    const win = await window.documentPictureInPicture.requestWindow({ width, height });
+    pipWin = win;
+    win.document.body.style.cssText = 'margin:0;background:#000;overflow:hidden;';
+    Object.assign(remoteEl.style, { width: '100vw', height: '100vh', objectFit: 'contain' });
+    pipMirrorStyle();
+    win.document.body.append(remoteEl);
+    remoteEl.play().catch(() => {});
+    win.addEventListener('pagehide', () => {
+      remoteEl.removeAttribute('style');
+      $('call').insertBefore(remoteEl, $('call').firstChild);
+      remoteEl.play().catch(() => {});
+      pipWin = null;
+      updateViewButtons();
+    });
+    updateViewButtons();
+  }
+
   $('pipBtn').onclick = async () => {
     try {
-      if (document.pictureInPictureElement) await document.exitPictureInPicture();
-      else await remoteEl.requestPictureInPicture();
+      if (pipWin) { pipWin.close(); return; }
+      if (document.pictureInPictureElement) { await document.exitPictureInPicture(); return; }
+      if (canDocPip) { try { await openDocPip(); return; } catch (_) {} } // fall back to standard PiP
+      await remoteEl.requestPictureInPicture();
     } catch (_) {}
   };
   ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, updateViewButtons));
   ['loadedmetadata', 'emptied', 'enterpictureinpicture', 'leavepictureinpicture'].forEach(ev => remoteEl.addEventListener(ev, updateViewButtons));
+
+  // ---------- Mirror view (display only, the stream sent to the other person is not changed) ----------
+  let mirrorOn = true;
+  try { mirrorOn = localStorage.getItem('mirror') !== '0'; } catch (_) {}
+  const applyMirror = () => { $('call').classList.toggle('mirror', mirrorOn); $('mirrorChk').checked = mirrorOn; pipMirrorStyle(); };
+  $('mirrorChk').onchange = e => {
+    mirrorOn = e.target.checked;
+    try { localStorage.setItem('mirror', mirrorOn ? '1' : '0'); } catch (_) {}
+    applyMirror();
+  };
+  applyMirror();
 
   // ---------- Call timer and join/leave sounds ----------
   try { soundOn = localStorage.getItem('sound') !== '0'; } catch (_) {}

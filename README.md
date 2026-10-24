@@ -10,9 +10,10 @@ A 1-to-1 video calling app that runs entirely in the browser and connects peers 
 - One-click room creation, shared via link or room code
 - Mute/unmute mic, turn camera on/off, hang up
 - Switch camera, microphone and speaker during a call, even while connected
-- Fullscreen and Picture-in-Picture (floating window) for the remote video, shown only where the browser supports them
+- Fullscreen and Picture-in-Picture (floating window) for the remote video, shown only where the browser supports them. On desktop Chrome/Edge the floating window uses the Document Picture-in-Picture API, so the mirror view carries over; other browsers use the standard video Picture-in-Picture, which cannot be mirrored
 - Keeps the screen awake during a call (Screen Wake Lock), so phones and laptops don't dim or sleep mid-conversation
 - Call timer, plus a short chime when the other person joins and a lower one when they leave (can be turned off in the Devices panel)
+- Mirror view for both your own video and the other person's video (display only, can be turned off in the Devices panel); your own preview shows the full camera frame without cropping
 - Built-in connection info panel: connection path (LAN / direct / TURN), latency, resolution, frame rate, bitrate and packet loss
 - Light/dark theme that follows the system setting, works on mobile
 - Bilingual Vietnamese/English interface, chosen from the browser language with a language switch button
