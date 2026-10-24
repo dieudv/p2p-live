@@ -214,6 +214,7 @@
     <label><span data-i18n="lblMic"></span><select id="selMic"></select></label>
     <label id="spkRow"><span data-i18n="lblSpk"></span><select id="selSpk"></select></label>
     <label><span data-i18n="lblQuality"></span><select id="selQuality"></select></label>
+    <label class="check"><input type="checkbox" id="muteSharedChk"><span data-i18n="lblMuteShared"></span></label>
     <label class="check"><input type="checkbox" id="soundChk"><span data-i18n="lblSound"></span></label>
     <label class="check"><input type="checkbox" id="mirrorChk"><span data-i18n="lblMirror"></span></label>
     <p class="err" id="devErr" role="alert"></p>
@@ -268,6 +269,7 @@
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
       more: 'Thêm', sharingNow: 'đang chia sẻ màn hình',
+      lblMuteShared: 'Khi chia sẻ tab, tắt tiếng tab đó trên máy tôi (tránh vọng)', shareAudioOn: 'Đang chia sẻ cả âm thanh của tab.',
       lblQuality: 'Chất lượng video gửi đi', qAuto: 'Tự động', qHigh: 'Cao (720p)', qMedium: 'Trung bình (480p)', qLow: 'Thấp (360p)', qSaver: 'Tiết kiệm dữ liệu (240p)',
       flipCam: 'Đổi camera trước/sau', flipFail: 'Không đổi được camera.',
       inviteTitle: 'Đang chờ người kia vào', inviteSub: 'Gửi link này để mời họ vào phòng:', inviteLinkLbl: 'Link phòng', inviteShare: 'Chia sẻ', inviteCopy: 'Sao chép',
@@ -301,6 +303,7 @@
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
       more: 'More', sharingNow: 'sharing your screen',
+      lblMuteShared: 'When sharing a tab, mute it on my device (avoids echo)', shareAudioOn: 'Tab audio is being shared too.',
       lblQuality: 'Outgoing video quality', qAuto: 'Auto', qHigh: 'High (720p)', qMedium: 'Medium (480p)', qLow: 'Low (360p)', qSaver: 'Data saver (240p)',
       flipCam: 'Switch front/back camera', flipFail: 'Could not switch camera.',
       inviteTitle: 'Waiting for the other person', inviteSub: 'Send them this link to join the room:', inviteLinkLbl: 'Room link', inviteShare: 'Share', inviteCopy: 'Copy',
@@ -582,7 +585,10 @@
       if (kind === 'video') { updateRear(); applyQuality(); }
       const pc = call && call.peerConnection;
       const sender = pc && pc.getSenders().find(x => x.track && x.track.kind === kind);
-      if (sender && !(sharing && kind === 'video')) { try { await sender.replaceTrack(nt); } catch (_) {} }
+      if (kind === 'audio' && mix) { // keep the mixed track on the wire, only swap the microphone inside it
+        const mixed = startMix(nt, mix.share);
+        if (sender && mixed) { try { await sender.replaceTrack(mixed); } catch (_) {} }
+      } else if (sender && !(sharing && kind === 'video')) { try { await sender.replaceTrack(nt); } catch (_) {} }
       $('local').srcObject = null;
       $('local').srcObject = sharingStream || stream;
     }
@@ -895,13 +901,76 @@
     updateInvite();
   }
 
+  // Shared tab audio and the microphone are mixed into ONE audio track with Web Audio. That track replaces the
+  // microphone track on the existing connection (no renegotiation needed). Muting the mic keeps the tab audio.
+  let mix = null; // { nodes, share }
+  const muteSharedChk = $('muteSharedChk');
+  let muteShared = true;
+  try { muteShared = localStorage.getItem('muteShared') !== '0'; } catch (_) {}
+  muteSharedChk.checked = muteShared;
+  muteSharedChk.onchange = e => {
+    muteShared = e.target.checked;
+    try { localStorage.setItem('muteShared', muteShared ? '1' : '0'); } catch (_) {}
+  };
+
+  function stopMixNodes() {
+    if (mix) mix.nodes.forEach(n => { try { n.disconnect(); } catch (_) {} });
+    mix = null;
+  }
+  function startMix(micTrack, shareTrack) {
+    stopMixNodes();
+    if (!audioCtx) return null;
+    const dest = audioCtx.createMediaStreamDestination();
+    const nodes = [];
+    [micTrack, shareTrack].forEach(tr => {
+      if (!tr) return;
+      const src = audioCtx.createMediaStreamSource(new MediaStream([tr]));
+      src.connect(dest); // not connected to the speakers, so nothing is played locally
+      nodes.push(src);
+    });
+    mix = { nodes, share: shareTrack };
+    return dest.stream.getAudioTracks()[0];
+  }
+  async function mixShareAudio(pc, ds) {
+    const shareAudio = ds.getAudioTracks()[0];
+    if (!shareAudio) return; // no tab audio chosen in the browser's picker
+    const sender = pc.getSenders().find(x => x.track && x.track.kind === 'audio');
+    const mixed = sender && startMix(stream.getAudioTracks()[0], shareAudio);
+    try {
+      if (!mixed) throw new Error('no mixer');
+      await sender.replaceTrack(mixed);
+      showToast(t('shareAudioOn'));
+    } catch (_) { stopMixNodes(); shareAudio.stop(); }
+  }
+  function unmixShareAudio(pc) {
+    if (!mix) return;
+    const mic = stream && stream.getAudioTracks()[0];
+    const sender = pc && pc.getSenders().find(x => x.track && x.track.kind === 'audio');
+    if (sender && mic) sender.replaceTrack(mic).catch(() => {});
+    stopMixNodes();
+  }
+
   async function startShare() {
     if (sharing) return stopShare(true);
     const pc = call && call.peerConnection;
     if (!pc) return;
+    // Audio: only a browser TAB's audio is offered. System audio is excluded on purpose, because it also
+    // contains the other person's voice coming out of your speakers and would be sent straight back to them.
+    // Sharing this very tab is excluded for the same reason.
+    const opts = {
+      video: { frameRate: { ideal: 15 } },
+      audio: { suppressLocalAudioPlayback: muteShared, echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      selfBrowserSurface: 'exclude',
+      systemAudio: 'exclude'
+    };
     let ds;
-    try { ds = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 15 } }, audio: false }); }
-    catch (_) { return; } // cancelled
+    try { ds = await navigator.mediaDevices.getDisplayMedia(opts); }
+    catch (e) {
+      if (e && (e.name === 'NotAllowedError' || e.name === 'AbortError')) return; // cancelled
+      // Browser does not understand these options (older Safari / Firefox): share the picture only.
+      try { ds = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 15 } }, audio: false }); }
+      catch (_) { return; }
+    }
     const track = ds.getVideoTracks()[0];
     const sender = pc.getSenders().find(x => x.track && x.track.kind === 'video');
     if (!track || !sender) { ds.getTracks().forEach(x => x.stop()); return; }
@@ -910,6 +979,7 @@
     catch (_) { ds.getTracks().forEach(x => x.stop()); return; }
     sharing = true; sharingStream = ds;
     applyQuality();
+    await mixShareAudio(pc, ds);
     track.addEventListener('ended', () => stopShare(true)); // browser's own "Stop sharing" bar
     $('local').srcObject = ds;
     $('call').classList.add('sharing');
@@ -926,6 +996,7 @@
     const pc = call && call.peerConnection;
     const sender = pc && pc.getSenders().find(x => x.track && x.track.kind === 'video');
     if (sender && cam) sender.replaceTrack(cam).then(() => applyQuality()).catch(() => {});
+    unmixShareAudio(pc);
     $('local').srcObject = stream;
     $('call').classList.remove('sharing');
     if (notify) sendCtl({ type: 'share', on: false });
