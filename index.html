@@ -128,6 +128,17 @@
   @keyframes fadeOnly { 0% { opacity: 0; } 10% { opacity: 1; } 100% { opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .fly { animation: fadeOnly 1.8s forwards; } .hand { transition: none; } }
   .badge.dot { min-width: 10px; width: 10px; height: 10px; padding: 0; top: 2px; right: 2px; background: #ef4444; box-shadow: 0 0 0 2px rgba(16,26,34,.9); }
+  .invite { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; pointer-events: none; }
+  .invite[hidden] { display: none; }
+  .invcard { pointer-events: auto; width: min(420px, 100%); padding: 22px; text-align: center; color: #fff; background: rgba(16,26,34,.92); border: 1px solid rgba(255,255,255,.18); border-radius: 14px; }
+  .invcard h2 { margin: 0 0 6px; font-size: 1.1rem; }
+  .invcard p { margin: 0 0 14px; color: #b9c6d0; font-size: .9rem; }
+  .invcard input { width: 100%; padding: 10px 12px; text-align: center; font-size: .9rem; color: #fff; text-overflow: ellipsis; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.06); }
+  .invrow { display: flex; gap: 10px; margin-top: 14px; }
+  .invbtn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,.25); background: transparent; color: #fff; font-weight: 600; cursor: pointer; }
+  .invbtn.primary { background: var(--accent); border-color: transparent; color: var(--accent-ink); }
+  .invbtn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  .invbtn svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .more-wrap { position: relative; }
   .menu { display: none; position: absolute; right: 0; bottom: calc(100% + 10px); z-index: 6; width: min(250px, 90vw); padding: 6px; flex-direction: column; gap: 2px; background: rgba(16,26,34,.96); border: 1px solid rgba(255,255,255,.18); border-radius: 12px; }
   .menu.on { display: flex; }
@@ -165,6 +176,17 @@
 
 <section class="call mirror" id="call">
   <video id="remote" autoplay playsinline></video>
+  <div class="invite" id="invite" hidden>
+    <div class="invcard" role="region" aria-labelledby="inviteTitle">
+      <h2 id="inviteTitle" data-i18n="inviteTitle"></h2>
+      <p data-i18n="inviteSub"></p>
+      <input id="inviteLink" readonly data-i18n-aria="inviteLinkLbl">
+      <div class="invrow">
+        <button class="invbtn primary" id="inviteShare" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span data-i18n="inviteShare"></span></button>
+        <button class="invbtn" id="inviteCopy" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span data-i18n="inviteCopy"></span></button>
+      </div>
+    </div>
+  </div>
   <video id="local" autoplay playsinline muted></video>
   <div class="vu" id="vuRemote" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="vu" id="vuLocal" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -174,7 +196,7 @@
   <div class="status">
     <span class="pill" id="status"></span>
     <span class="pill" id="timer" role="timer" data-i18n-label="timerLbl" hidden>00:00</span>
-    <span class="pill"><span data-i18n="room"></span> <b id="roomName"></b><button id="shareLinkBtn" data-i18n-label="shareLink"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button></span>
+    <span class="pill"><span data-i18n="room"></span> <b id="roomName"></b></span>
   </div>
   <div class="panel" id="devPanel" role="dialog" aria-labelledby="devTitle">
     <h2 id="devTitle" data-i18n="devices"></h2>
@@ -231,13 +253,13 @@
     vi: {
       sub: 'Kết nối trực tiếp giữa hai trình duyệt, không lưu video trên máy chủ.',
       create: 'Tạo phòng mới', or: 'hoặc nhập mã phòng', codePh: 'Mã phòng', join: 'Vào phòng',
-      room: 'Phòng', copied: 'Đã sao chép', copyPrompt: 'Sao chép link này:',
+      room: 'Phòng', copied: 'Đã sao chép',
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
       more: 'Thêm', sharingNow: 'đang chia sẻ màn hình',
+      inviteTitle: 'Đang chờ người kia vào', inviteSub: 'Gửi link này để mời họ vào phòng:', inviteLinkLbl: 'Link phòng', inviteShare: 'Chia sẻ', inviteCopy: 'Sao chép',
       react: 'Biểu tượng cảm xúc', handRaise: 'Giơ tay', handLower: 'Hạ tay', remoteHandUp: 'Người kia đã giơ tay', remoteHandDown: 'Người kia đã hạ tay',
       install: 'Cài đặt như ứng dụng', iosHint: 'Để cài trên iPhone/iPad: mở bằng Safari, bấm nút Chia sẻ rồi chọn “Thêm vào MH chính”.',
-      shareLink: 'Chia sẻ link phòng',
       chat: 'Trò chuyện', chatPh: 'Nhập tin nhắn…', send: 'Gửi',
       footerOss: 'Mã nguồn mở trên GitHub:',
       share: 'Chia sẻ màn hình', shareStop: 'Dừng chia sẻ màn hình',
@@ -262,13 +284,13 @@
     en: {
       sub: 'Direct connection between two browsers. No video is stored on any server.',
       create: 'Create new room', or: 'or enter a room code', codePh: 'Room code', join: 'Join room',
-      room: 'Room', copied: 'Copied', copyPrompt: 'Copy this link:',
+      room: 'Room', copied: 'Copied',
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
       more: 'More', sharingNow: 'sharing your screen',
+      inviteTitle: 'Waiting for the other person', inviteSub: 'Send them this link to join the room:', inviteLinkLbl: 'Room link', inviteShare: 'Share', inviteCopy: 'Copy',
       react: 'Reactions', handRaise: 'Raise hand', handLower: 'Lower hand', remoteHandUp: 'The other person raised their hand', remoteHandDown: 'The other person lowered their hand',
       install: 'Install as an app', iosHint: 'To install on iPhone/iPad: open in Safari, tap Share, then “Add to Home Screen”.',
-      shareLink: 'Share room link',
       chat: 'Chat', chatPh: 'Type a message…', send: 'Send',
       footerOss: 'Open source on GitHub:',
       share: 'Share screen', shareStop: 'Stop sharing screen',
@@ -371,6 +393,7 @@
   let statsTimer = null, prev = {}, info = null, devErrKey = null, sinkId = '';
   let startedAt = null, timerId = null, audioCtx = null, soundOn = true;
   let sharing = false, sharingStream = null, remoteShare = false, gateConn = null;
+  let isHost = false, hostReady = false; // the invite card is only for the room's host, while waiting
 
   const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
   const makeCode = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), n => alphabet[n % alphabet.length]).join('');
@@ -401,9 +424,10 @@
   // The first person into a room keeps its ID. Anyone else first asks permission over a data
   // channel: the host lets exactly one guest in and answers "full" to everyone after that.
   function startAsHost() {
+    isHost = true;
     setStatus('creating');
     peer = new Peer(PREFIX + room, PEER_OPTS);
-    peer.on('open', () => setStatus('waiting'));
+    peer.on('open', () => { hostReady = true; setStatus('waiting'); updateInvite(); });
     peer.on('connection', conn => {
       conn.on('data', d => { if (conn === guestConn) onCtl(d); });
       conn.on('open', () => {
@@ -432,6 +456,7 @@
   }
 
   function startAsGuest() {
+    isHost = false; hostReady = false;
     setStatus('connecting');
     peer = new Peer(PEER_OPTS);
     peer.on('open', () => {
@@ -757,6 +782,7 @@
     $('moreBtn').setAttribute('aria-label', moreLabel);
     $('moreBtn').title = moreLabel;
     $('moreDot').hidden = !sharing;
+    updateInvite();
   }
 
   async function startShare() {
@@ -825,24 +851,30 @@
   // iOS Safari has no install prompt, so show the manual steps instead.
   if (isIOS && !isStandalone()) $('iosHint').hidden = false;
 
-  // ---------- Quick share of the room link ----------
-  // Opens the system share sheet with just the URL. Browsers without the Web Share API (for example
-  // Firefox on desktop) copy the link to the clipboard instead, so there is always a way to share it.
-  const shareIcon = $('shareLinkBtn').innerHTML;
-  function flashCopied() {
-    const btn = $('shareLinkBtn');
-    btn.innerHTML = ico('check');
-    btn.setAttribute('aria-label', t('copied'));
-    btn.title = t('copied');
-    setTimeout(() => { btn.innerHTML = shareIcon; render(); }, 1800); // render() restores the label
+  // ---------- Invite card: link, Share and Copy, shown in the middle of the screen while waiting ----------
+  // Visible only to the host, from the moment the room exists until the other person is connected,
+  // and again whenever that person leaves.
+  function updateInvite() {
+    const show = isHost && hostReady && !startedAt;
+    $('invite').hidden = !show;
+    if (show) $('inviteLink').value = location.href;
   }
-  $('shareLinkBtn').onclick = async () => {
-    if (navigator.share) {
-      try { await navigator.share({ url: location.href }); return; }
-      catch (e) { if (e.name === 'AbortError') return; } // any other error: fall back to copying
+  $('inviteLink').addEventListener('focus', e => e.target.select());
+  // Share sheet with just the URL. Without the Web Share API (e.g. Firefox on desktop) only Copy is shown.
+  if (!navigator.share) $('inviteShare').style.display = 'none';
+  $('inviteShare').onclick = async () => {
+    try { await navigator.share({ url: location.href }); } catch (_) {} // cancelled or failed: Copy is still there
+  };
+  $('inviteCopy').onclick = async () => {
+    const label = $('inviteCopy').lastElementChild;
+    try {
+      await navigator.clipboard.writeText(location.href);
+      label.textContent = t('copied');
+      setTimeout(() => { label.textContent = t('inviteCopy'); }, 1800);
+    } catch (_) {
+      $('inviteLink').focus(); // clipboard blocked: select the link so it can be copied by hand
+      $('inviteLink').select();
     }
-    try { await navigator.clipboard.writeText(location.href); flashCopied(); }
-    catch (_) { prompt(t('copyPrompt'), location.href); }
   };
 
   // ---------- Speaking indicator and mic level ----------
