@@ -9,6 +9,8 @@ A 1-to-1 video calling app that runs entirely in the browser and connects peers 
 - Direct 1-to-1 video and audio calls between two browsers
 - One-click room creation, shared via link or room code
 - Mute/unmute mic, turn camera on/off, hang up
+- Switch camera, microphone and speaker during a call, even while connected
+- Built-in connection info panel: connection path (LAN / direct / TURN), latency, resolution, frame rate, bitrate and packet loss
 - Light/dark theme that follows the system setting, works on mobile
 - Bilingual Vietnamese/English interface, chosen from the browser language with a language switch button
 - No installation, no account, no build step
@@ -85,7 +87,7 @@ Note: TURN credentials placed in a static file are publicly visible. For a serio
 
 ## Checking which path a call uses
 
-During a call, open `chrome://webrtc-internals` and look at the selected ICE candidate pair: `host` is a direct LAN path, `srflx` goes through the public IP, and `relay` goes through TURN.
+During a call, click **Info** in the control bar. The panel shows the connection path, latency, and the resolution, frame rate and bitrate of the video in both directions, refreshed every second. For deeper debugging you can still open `chrome://webrtc-internals` and look at the selected ICE candidate pair: `host` is a direct path on the same network, `srflx` goes through the public IP, and `relay` goes through TURN.
 
 ## Tech stack
 
