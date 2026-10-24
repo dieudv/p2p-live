@@ -33,7 +33,7 @@ Media streams are always encrypted by WebRTC (DTLS-SRTP) and never pass through 
 Browsers only allow camera/mic access on HTTPS or `localhost`, so serve the files with a local static server:
 
 ```bash
-git clone https://github.com/<your-username>/p2p-live.git
+git clone https://github.com/dieudv/p2p-live.git
 cd p2p-live
 python3 -m http.server 8080
 ```
@@ -93,6 +93,12 @@ Note: TURN credentials placed in a static file are publicly visible. For a serio
 ## Checking which path a call uses
 
 During a call, click **Info** in the control bar. The panel shows the connection path, latency, and the resolution, frame rate and bitrate of the video in both directions, refreshed every second. For deeper debugging you can still open `chrome://webrtc-internals` and look at the selected ICE candidate pair: `host` is a direct path on the same network, `srflx` goes through the public IP, and `relay` goes through TURN.
+
+## License
+
+Released under the [MIT License](LICENSE). You are free to use, copy, modify, merge, publish, distribute, sublicense and sell this project, for commercial or non-commercial purposes, as long as the copyright notice and license text are kept in copies or substantial portions of it.
+
+The code is provided as is, without warranty. PeerJS is loaded from a CDN and is not part of this repository, it has its own license (also MIT).
 
 ## Tech stack
 

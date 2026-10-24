@@ -17,7 +17,11 @@
   html, body { height: 100%; margin: 0; }
   body { background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   button, input { font: inherit; color: inherit; }
-  .lobby { min-height: 100%; display: grid; place-items: center; padding: 24px; position: relative; }
+  .lobby { min-height: 100%; display: grid; grid-template-rows: 1fr auto; place-items: center; padding: 24px; position: relative; }
+  .foot { margin-top: 24px; font-size: .85rem; color: var(--muted); text-align: center; }
+  .foot a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+  .foot a:hover { color: var(--ink); }
+  .foot a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 28px; width: min(420px, 100%); }
   h1 { margin: 0 0 6px; font-size: 1.6rem; letter-spacing: -0.01em; }
   p.sub { margin: 0 0 22px; color: var(--muted); }
@@ -86,6 +90,10 @@
     </div>
     <p class="err" id="err" role="alert"></p>
   </div>
+  <footer class="foot">
+    <span data-i18n="footerOss"></span>
+    <a href="https://github.com/dieudv/p2p-live" target="_blank" rel="noopener noreferrer">github.com/dieudv/p2p-live</a>
+  </footer>
 </main>
 
 <section class="call mirror" id="call">
@@ -134,6 +142,7 @@
       room: 'Phòng', copy: 'Sao chép link', copied: 'Đã sao chép', copyPrompt: 'Sao chép link này:',
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
+      footerOss: 'Mã nguồn mở trên GitHub:',
       share: 'Chia sẻ màn hình', shareStop: 'Dừng chia sẻ màn hình',
       lblSound: 'Âm báo khi có người vào hoặc rời', timerLbl: 'Thời gian cuộc gọi',
       lblMirror: 'Lật gương video (chỉ đổi cách bạn nhìn)',
@@ -159,6 +168,7 @@
       room: 'Room', copy: 'Copy link', copied: 'Copied', copyPrompt: 'Copy this link:',
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
+      footerOss: 'Open source on GitHub:',
       share: 'Share screen', shareStop: 'Stop sharing screen',
       lblSound: 'Sound when someone joins or leaves', timerLbl: 'Call duration',
       lblMirror: 'Mirror videos (only changes what you see)',
