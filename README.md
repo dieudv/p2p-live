@@ -18,7 +18,7 @@ A 1-to-1 video calling app that runs entirely in the browser and connects peers 
 - Compact control bar: microphone, camera, chat, reactions and hang up stay in reach, while screen share, Picture-in-Picture, fullscreen, device selection and connection info live in a **More** (⋯) menu, which shows a red dot while you are sharing your screen
 - Fullscreen and Picture-in-Picture (floating window) for the remote video, shown only where the browser supports them. On desktop Chrome/Edge the floating window uses the Document Picture-in-Picture API, so the mirror view carries over; other browsers use the standard video Picture-in-Picture, which cannot be mirrored
 - Keeps the screen awake during a call (Screen Wake Lock), so phones and laptops don't dim or sleep mid-conversation
-- Emoji reactions (👍 ❤️ 😂 😮 👏 🎉) that float up over the video, and a raise-hand button that shows a ✋ badge on your video for the other person; only emojis from a fixed list are accepted from the other side
+- Emoji reactions (👍 👎 ❤️ 😂 😮 😢 👏 🎉) that float up over the video, and a raise-hand button that shows a ✋ badge on your video for the other person; only emojis from a fixed list are accepted from the other side
 - Speaking indicator and mic level: a small animated three-bar icon appears inside the video of whoever is talking (like Google Meet), and a level bar on the mic button shows your own volume (both are computed locally, nothing is sent)
 - Call timer, plus a short chime when the other person joins and a lower one when they leave (can be turned off in the Devices panel)
 - Mirror view for both your own video and the other person's video (display only, can be turned off in the Devices panel); your own preview shows the full camera frame without cropping
