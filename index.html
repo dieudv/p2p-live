@@ -213,6 +213,7 @@
     <label><span data-i18n="lblCam"></span><select id="selCam"></select></label>
     <label><span data-i18n="lblMic"></span><select id="selMic"></select></label>
     <label id="spkRow"><span data-i18n="lblSpk"></span><select id="selSpk"></select></label>
+    <label><span data-i18n="lblQuality"></span><select id="selQuality"></select></label>
     <label class="check"><input type="checkbox" id="soundChk"><span data-i18n="lblSound"></span></label>
     <label class="check"><input type="checkbox" id="mirrorChk"><span data-i18n="lblMirror"></span></label>
     <p class="err" id="devErr" role="alert"></p>
@@ -267,6 +268,7 @@
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
       more: 'Thêm', sharingNow: 'đang chia sẻ màn hình',
+      lblQuality: 'Chất lượng video gửi đi', qAuto: 'Tự động', qHigh: 'Cao (720p)', qMedium: 'Trung bình (480p)', qLow: 'Thấp (360p)', qSaver: 'Tiết kiệm dữ liệu (240p)',
       flipCam: 'Đổi camera trước/sau', flipFail: 'Không đổi được camera.',
       inviteTitle: 'Đang chờ người kia vào', inviteSub: 'Gửi link này để mời họ vào phòng:', inviteLinkLbl: 'Link phòng', inviteShare: 'Chia sẻ', inviteCopy: 'Sao chép',
       react: 'Biểu tượng cảm xúc', handRaise: 'Giơ tay', handLower: 'Hạ tay', remoteHandUp: 'Người kia đã giơ tay', remoteHandDown: 'Người kia đã hạ tay',
@@ -299,6 +301,7 @@
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
       more: 'More', sharingNow: 'sharing your screen',
+      lblQuality: 'Outgoing video quality', qAuto: 'Auto', qHigh: 'High (720p)', qMedium: 'Medium (480p)', qLow: 'Low (360p)', qSaver: 'Data saver (240p)',
       flipCam: 'Switch front/back camera', flipFail: 'Could not switch camera.',
       inviteTitle: 'Waiting for the other person', inviteSub: 'Send them this link to join the room:', inviteLinkLbl: 'Room link', inviteShare: 'Share', inviteCopy: 'Copy',
       react: 'Reactions', handRaise: 'Raise hand', handLower: 'Lower hand', remoteHandUp: 'The other person raised their hand', remoteHandDown: 'The other person lowered their hand',
@@ -384,6 +387,7 @@
     renderInfo();
     updateViewButtons();
     updateShareButton();
+    updateQualityLabels();
   }
 
   $('lang').onclick = () => {
@@ -575,7 +579,7 @@
       nt.enabled = wasEnabled;
       stream.addTrack(nt);
       if (kind === 'audio') setLocalMeter(); // the analyser must follow the new microphone
-      if (kind === 'video') updateRear();
+      if (kind === 'video') { updateRear(); applyQuality(); }
       const pc = call && call.peerConnection;
       const sender = pc && pc.getSenders().find(x => x.track && x.track.kind === kind);
       if (sender && !(sharing && kind === 'video')) { try { await sender.replaceTrack(nt); } catch (_) {} }
@@ -585,6 +589,58 @@
     render();
     return !!ns && !devErrKey;
   }
+
+  // ---------- Outgoing video quality ----------
+  // Caps what YOU send (resolution, bitrate, frame rate) through the sender's encoding parameters.
+  // It saves data and CPU on slow links and does not restart the connection. The Info panel shows the effect.
+  const QUALITY = {
+    auto:   { label: 'qAuto' },
+    high:   { label: 'qHigh',   h: 720, kbps: 2500, fps: 30 },
+    medium: { label: 'qMedium', h: 480, kbps: 1000, fps: 30 },
+    low:    { label: 'qLow',    h: 360, kbps: 500,  fps: 24 },
+    saver:  { label: 'qSaver',  h: 240, kbps: 200,  fps: 15 }
+  };
+  let quality = 'auto';
+  try { const q = localStorage.getItem('quality'); if (QUALITY[q]) quality = q; } catch (_) {}
+
+  Object.keys(QUALITY).forEach(k => {
+    const o = document.createElement('option');
+    o.value = k;
+    $('selQuality').append(o);
+  });
+  $('selQuality').value = quality;
+  function updateQualityLabels() {
+    for (const o of $('selQuality').options) o.textContent = t(QUALITY[o.value].label);
+  }
+
+  async function applyQuality(retry = 0) {
+    const pc = call && call.peerConnection;
+    const sender = pc && pc.getSenders().find(x => x.track && x.track.kind === 'video');
+    if (!sender) return;
+    const params = sender.getParameters();
+    if (!params.encodings || !params.encodings.length) { // not negotiated yet, try again shortly
+      if (retry < 6) setTimeout(() => applyQuality(retry + 1), 500);
+      return;
+    }
+    const enc = params.encodings[0], q = QUALITY[quality];
+    if (q.h) {
+      const st = sender.track.getSettings();
+      const side = Math.min(st.width || q.h, st.height || q.h); // short side, so portrait phones work too
+      enc.scaleResolutionDownBy = Math.max(1, side / q.h);
+      enc.maxBitrate = q.kbps * 1000;
+      enc.maxFramerate = q.fps;
+    } else {
+      delete enc.scaleResolutionDownBy;
+      delete enc.maxBitrate;
+      delete enc.maxFramerate;
+    }
+    try { await sender.setParameters(params); } catch (_) {}
+  }
+  $('selQuality').onchange = e => {
+    quality = e.target.value;
+    try { localStorage.setItem('quality', quality); } catch (_) {}
+    applyQuality();
+  };
 
   // ---------- Quick front/back camera switch (button on your own video) ----------
   let toastTimer = null, flipping = false;
@@ -853,6 +909,7 @@
     try { await sender.replaceTrack(track); }
     catch (_) { ds.getTracks().forEach(x => x.stop()); return; }
     sharing = true; sharingStream = ds;
+    applyQuality();
     track.addEventListener('ended', () => stopShare(true)); // browser's own "Stop sharing" bar
     $('local').srcObject = ds;
     $('call').classList.add('sharing');
@@ -868,7 +925,7 @@
     const cam = stream && stream.getVideoTracks()[0];
     const pc = call && call.peerConnection;
     const sender = pc && pc.getSenders().find(x => x.track && x.track.kind === 'video');
-    if (sender && cam) sender.replaceTrack(cam).catch(() => {});
+    if (sender && cam) sender.replaceTrack(cam).then(() => applyQuality()).catch(() => {});
     $('local').srcObject = stream;
     $('call').classList.remove('sharing');
     if (notify) sendCtl({ type: 'share', on: false });
@@ -1165,6 +1222,7 @@
     if (startedAt) return; // the 'stream' event can fire more than once
     startedAt = Date.now();
     updateShareButton();
+    applyQuality();
     $('timer').hidden = false;
     tick();
     timerId = setInterval(tick, 1000);
