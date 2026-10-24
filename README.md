@@ -12,6 +12,7 @@ A 1-to-1 video calling app that runs entirely in the browser and connects peers 
 - Switch camera, microphone and speaker during a call, even while connected
 - Fullscreen and Picture-in-Picture (floating window) for the remote video, shown only where the browser supports them
 - Keeps the screen awake during a call (Screen Wake Lock), so phones and laptops don't dim or sleep mid-conversation
+- Call timer, plus a short chime when the other person joins and a lower one when they leave (can be turned off in the Devices panel)
 - Built-in connection info panel: connection path (LAN / direct / TURN), latency, resolution, frame rate, bitrate and packet loss
 - Light/dark theme that follows the system setting, works on mobile
 - Bilingual Vietnamese/English interface, chosen from the browser language with a language switch button

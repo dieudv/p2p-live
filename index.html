@@ -59,6 +59,10 @@
   .ctl svg { width: 22px; height: 22px; display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .pill button { display: inline-flex; vertical-align: middle; align-items: center; }
   .pill button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .status { flex-wrap: wrap; }
+  #timer { font-variant-numeric: tabular-nums; }
+  .panel label.check { display: flex; align-items: center; gap: 10px; color: #fff; }
+  .panel input[type="checkbox"] { flex: none; width: 18px; height: 18px; margin: 0; padding: 0; accent-color: var(--accent); }
   .ctl:disabled { opacity: .4; cursor: not-allowed; }
   @media (max-width: 600px) { #local { bottom: 144px; } .panel { bottom: 144px; } }
 </style>
@@ -85,6 +89,7 @@
   <video id="local" autoplay playsinline muted></video>
   <div class="status">
     <span class="pill" id="status"></span>
+    <span class="pill" id="timer" role="timer" data-i18n-label="timerLbl" hidden>00:00</span>
     <span class="pill"><span data-i18n="room"></span> <b id="roomName"></b><button id="copy"></button></span>
   </div>
   <div class="panel" id="devPanel" role="dialog" aria-labelledby="devTitle">
@@ -92,6 +97,7 @@
     <label><span data-i18n="lblCam"></span><select id="selCam"></select></label>
     <label><span data-i18n="lblMic"></span><select id="selMic"></select></label>
     <label id="spkRow"><span data-i18n="lblSpk"></span><select id="selSpk"></select></label>
+    <label class="check"><input type="checkbox" id="soundChk"><span data-i18n="lblSound"></span></label>
     <p class="err" id="devErr" role="alert"></p>
   </div>
   <div class="panel" id="infoPanel" role="dialog" aria-labelledby="infoTitle">
@@ -122,6 +128,7 @@
       room: 'Phòng', copy: 'Sao chép link', copied: 'Đã sao chép', copyPrompt: 'Sao chép link này:',
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
+      lblSound: 'Âm báo khi có người vào hoặc rời', timerLbl: 'Thời gian cuộc gọi',
       fullscreen: 'Toàn màn hình', exitFullscreen: 'Thoát toàn màn hình', pip: 'Cửa sổ nổi (PiP)', pipExit: 'Đóng cửa sổ nổi',
       full: 'Phòng đã đầy. Mỗi phòng chỉ cho phép 2 người.',
       devices: 'Thiết bị', info: 'Thông tin', lblCam: 'Camera', lblMic: 'Micro', lblSpk: 'Loa',
@@ -144,6 +151,7 @@
       room: 'Room', copy: 'Copy link', copied: 'Copied', copyPrompt: 'Copy this link:',
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
+      lblSound: 'Sound when someone joins or leaves', timerLbl: 'Call duration',
       fullscreen: 'Fullscreen', exitFullscreen: 'Exit fullscreen', pip: 'Picture-in-Picture', pipExit: 'Exit Picture-in-Picture',
       full: 'This room is full. Only 2 people are allowed per room.',
       devices: 'Devices', info: 'Info', lblCam: 'Camera', lblMic: 'Microphone', lblSpk: 'Speaker',
@@ -234,6 +242,7 @@
   let stream, peer, call, room;
   let guestId = null, guestConn = null; // host side: the one person allowed in
   let statsTimer = null, prev = {}, info = null, devErrKey = null, sinkId = '';
+  let startedAt = null, timerId = null, audioCtx = null, soundOn = true;
 
   const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
   const makeCode = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), n => alphabet[n % alphabet.length]).join('');
@@ -252,6 +261,7 @@
     loadDevices();
     inCall = true;
     keepAwake();
+    try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch (_) {}
     $('local').srcObject = stream;
     $('roomName').textContent = room;
     $('lobby').style.display = 'none';
@@ -307,8 +317,8 @@
 
   function bind(c) {
     call = c; prev = {};
-    c.on('stream', s => { $('remote').srcObject = s; setStatus('connected'); });
-    c.on('close', () => { $('remote').srcObject = null; setStatus('left'); });
+    c.on('stream', s => { $('remote').srcObject = s; setStatus('connected'); startTimer(); });
+    c.on('close', () => { $('remote').srcObject = null; setStatus('left'); stopTimer(); });
     c.on('error', fail);
   }
 
@@ -320,6 +330,8 @@
   function leave() {
     clearInterval(statsTimer);
     inCall = false;
+    startedAt = null;
+    clearInterval(timerId);
     try { wakeLock && wakeLock.release(); } catch (_) {}
     try { call && call.close(); peer && peer.destroy(); } catch (_) {}
     stream && stream.getTracks().forEach(tr => tr.stop());
@@ -536,6 +548,56 @@
   };
   ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, updateViewButtons));
   ['loadedmetadata', 'emptied', 'enterpictureinpicture', 'leavepictureinpicture'].forEach(ev => remoteEl.addEventListener(ev, updateViewButtons));
+
+  // ---------- Call timer and join/leave sounds ----------
+  try { soundOn = localStorage.getItem('sound') !== '0'; } catch (_) {}
+  $('soundChk').checked = soundOn;
+  $('soundChk').onchange = e => {
+    soundOn = e.target.checked;
+    try { localStorage.setItem('sound', soundOn ? '1' : '0'); } catch (_) {}
+    if (soundOn) playTone([660, 880]); // preview
+  };
+
+  // Short two-note chime made with Web Audio, so no audio files are needed.
+  function playTone(freqs) {
+    if (!soundOn || !audioCtx) return;
+    try {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const t0 = audioCtx.currentTime;
+      freqs.forEach((f, i) => {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain(), st = t0 + i * 0.14;
+        o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, st);
+        g.gain.exponentialRampToValueAtTime(0.18, st + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, st + 0.22);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(st); o.stop(st + 0.25);
+      });
+    } catch (_) {}
+  }
+
+  const pad2 = n => String(n).padStart(2, '0');
+  function fmtTime(ms) {
+    const sec = Math.floor(ms / 1000), h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60);
+    return (h ? h + ':' + pad2(m) : pad2(m)) + ':' + pad2(sec % 60);
+  }
+  const tick = () => { $('timer').textContent = fmtTime(Date.now() - startedAt); };
+
+  function startTimer() {
+    if (startedAt) return; // the 'stream' event can fire more than once
+    startedAt = Date.now();
+    $('timer').hidden = false;
+    tick();
+    timerId = setInterval(tick, 1000);
+    playTone([660, 880]);
+  }
+  function stopTimer() {
+    if (!startedAt) return;
+    clearInterval(timerId);
+    startedAt = null;
+    $('timer').hidden = true;
+    playTone([660, 440]);
+  }
 
   // ---------- Keep the screen awake during a call (Screen Wake Lock) ----------
   // The browser drops the lock whenever the tab is hidden, so request it again when the tab returns.
