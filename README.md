@@ -12,6 +12,7 @@ A 1-to-1 video calling app that runs entirely in the browser and connects peers 
 - Switch camera, microphone and speaker during a call, even while connected
 - Outgoing video quality: Auto, High (720p), Medium (480p), Low (360p) or Data saver (240p), chosen in the Devices panel; it caps the resolution, bitrate and frame rate you send, and the Info panel shows the effect
 - Quick front/back camera switch: a small button on your own video (shown when the device has more than one camera) flips between the front and rear cameras of a phone; the rear camera preview is never mirrored
+- Flashlight: with the rear camera, a small button on your own video turns the phone's flash on as a continuous light. It appears only where the browser exposes it (mostly Chrome/Edge on Android); iPhones and iPads do not allow websites to use the flash. The light turns off when you switch camera, turn the camera off or start sharing your screen
 - Installable as an app (PWA) on phones and desktops, with its own icon and window; the page opens fast, but calls still need an internet connection
 - Invite card in the middle of the screen while you wait for the other person: it shows the room link with **Share** (system share sheet, where the Web Share API exists) and **Copy** buttons, and disappears as soon as they join
 - Text chat over the same peer-to-peer connection: messages go straight between the two browsers and are not stored anywhere, so history is lost when the page closes

@@ -140,6 +140,8 @@
   .invbtn svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .flip { position: absolute; z-index: 2; right: 22px; bottom: calc(var(--lb) + 6px); width: 36px; height: 36px; border: 0; border-radius: 50%; padding: 0; display: grid; place-items: center; background: rgba(0,0,0,.55); color: #fff; cursor: pointer; }
   .flip[hidden] { display: none; }
+  .flip.torch { bottom: calc(var(--lb) + 50px); }
+  .flip[aria-pressed="true"] { background: #fff; color: #111; }
   .flip:disabled { opacity: .5; cursor: progress; }
   .flip:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
   .flip svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -224,6 +226,7 @@
   </div>
   <video id="local" autoplay playsinline muted></video>
   <button class="flip" id="flipBtn" type="button" hidden data-i18n-label="flipCam"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 0 0-15.5-6.2L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15.5 6.2L21 16"/><path d="M21 21v-5h-5"/></svg></button>
+  <button class="flip torch" id="torchBtn" type="button" hidden aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></button>
   <div class="vu" id="vuRemote" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="vu" id="vuLocal" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="hand" id="handRemote" aria-hidden="true">✋</div>
@@ -304,6 +307,7 @@
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
       more: 'Thêm', sharingNow: 'đang chia sẻ màn hình',
+      torchOn: 'Bật đèn flash', torchOff: 'Tắt đèn flash', torchFail: 'Không bật được đèn flash.',
       ytTitle: 'Nghe chung YouTube', ytHint: 'Dán link YouTube. Hai bên cùng xem và nghe đồng bộ, âm thanh không đi qua cuộc gọi.', ytPh: 'Dán link YouTube', ytGo: 'Phát chung',
       ytBad: 'Link YouTube không hợp lệ.', ytLoadFail: 'Không tải được trình phát YouTube.', ytClose: 'Dừng nghe chung',
       ytInviteMsg: 'Người kia mời bạn nghe chung một video YouTube.', ytJoin: 'Tham gia', ytDecline: 'Bỏ qua', ytStopped: 'Người kia đã dừng nghe chung.',
@@ -342,6 +346,7 @@
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
       more: 'More', sharingNow: 'sharing your screen',
+      torchOn: 'Turn flashlight on', torchOff: 'Turn flashlight off', torchFail: 'Could not turn the flashlight on.',
       ytTitle: 'Watch together', ytHint: 'Paste a YouTube link. You both watch in sync, and the sound does not go through the call.', ytPh: 'Paste a YouTube link', ytGo: 'Play together',
       ytBad: 'That is not a valid YouTube link.', ytLoadFail: 'Could not load the YouTube player.', ytClose: 'Stop watching together',
       ytInviteMsg: 'The other person invited you to watch a YouTube video together.', ytJoin: 'Join', ytDecline: 'Dismiss', ytStopped: 'The other person stopped watching together.',
@@ -567,6 +572,7 @@
       const off = btn.getAttribute('aria-pressed') !== 'true';
       tracks.forEach(tr => tr.enabled = !off);
       btn.setAttribute('aria-pressed', off);
+      if (off && kind === 'video') setTorch(false); // the light is pointless (and drains the battery) with the camera off
       render();
     });
   }
@@ -691,6 +697,36 @@
     applyQuality();
   };
 
+  // ---------- Flashlight (torch) of the rear camera ----------
+  // Only where the browser reports the capability (mostly Chrome/Edge on Android with a rear camera).
+  // iPhones/iPads and desktops do not expose it, so the button simply never appears there.
+  let torchTrack = null, torchOn = false;
+  function updateTorch() {
+    const tr = stream && stream.getVideoTracks()[0];
+    if (tr !== torchTrack) { torchTrack = tr || null; torchOn = false; } // a new camera track always starts with the light off
+    let caps = {};
+    try { caps = (tr && tr.getCapabilities && tr.getCapabilities()) || {}; } catch (_) {}
+    const facing = tr && tr.getSettings().facingMode;
+    $('torchBtn').hidden = !(caps.torch && facing !== 'user');
+    const label = t(torchOn ? 'torchOff' : 'torchOn');
+    $('torchBtn').setAttribute('aria-pressed', torchOn);
+    $('torchBtn').setAttribute('aria-label', label);
+    $('torchBtn').title = label;
+  }
+  async function setTorch(on) {
+    const tr = torchTrack;
+    if (!tr || (!on && !torchOn)) return;
+    try {
+      await tr.applyConstraints({ advanced: [{ torch: !!on }] });
+      torchOn = !!on;
+    } catch (_) {
+      torchOn = false;
+      if (on) showToast(t('torchFail'));
+    }
+    updateTorch();
+  }
+  $('torchBtn').onclick = () => setTorch(!torchOn);
+
   // ---------- Quick front/back camera switch (button on your own video) ----------
   let toastTimer = null, flipping = false;
   function showToast(msg) {
@@ -703,6 +739,7 @@
     const tr = stream && stream.getVideoTracks()[0];
     const f = tr && tr.getSettings().facingMode;
     $('call').classList.toggle('rear', f === 'environment');
+    updateTorch();
   }
   async function flipCamera() {
     if (flipping || !stream) return;
@@ -944,6 +981,7 @@
     $('moreDot').hidden = !sharing;
     updateInvite();
     updateYtState();
+    updateTorch();
   }
 
   // Shared tab audio and the microphone are mixed into ONE audio track with Web Audio. That track replaces the
@@ -1023,6 +1061,7 @@
     try { await sender.replaceTrack(track); }
     catch (_) { ds.getTracks().forEach(x => x.stop()); return; }
     sharing = true; sharingStream = ds;
+    setTorch(false);
     applyQuality();
     await mixShareAudio(pc, ds);
     track.addEventListener('ended', () => stopShare(true)); // browser's own "Stop sharing" bar
