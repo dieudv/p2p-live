@@ -174,7 +174,7 @@
   <div class="status">
     <span class="pill" id="status"></span>
     <span class="pill" id="timer" role="timer" data-i18n-label="timerLbl" hidden>00:00</span>
-    <span class="pill"><span data-i18n="room"></span> <b id="roomName"></b><button id="copy"></button><button id="shareLinkBtn" data-i18n-label="shareLink"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button></span>
+    <span class="pill"><span data-i18n="room"></span> <b id="roomName"></b><button id="shareLinkBtn" data-i18n-label="shareLink"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button></span>
   </div>
   <div class="panel" id="devPanel" role="dialog" aria-labelledby="devTitle">
     <h2 id="devTitle" data-i18n="devices"></h2>
@@ -231,13 +231,13 @@
     vi: {
       sub: 'Kết nối trực tiếp giữa hai trình duyệt, không lưu video trên máy chủ.',
       create: 'Tạo phòng mới', or: 'hoặc nhập mã phòng', codePh: 'Mã phòng', join: 'Vào phòng',
-      room: 'Phòng', copy: 'Sao chép link', copied: 'Đã sao chép', copyPrompt: 'Sao chép link này:',
+      room: 'Phòng', copied: 'Đã sao chép', copyPrompt: 'Sao chép link này:',
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
       more: 'Thêm', sharingNow: 'đang chia sẻ màn hình',
       react: 'Biểu tượng cảm xúc', handRaise: 'Giơ tay', handLower: 'Hạ tay', remoteHandUp: 'Người kia đã giơ tay', remoteHandDown: 'Người kia đã hạ tay',
       install: 'Cài đặt như ứng dụng', iosHint: 'Để cài trên iPhone/iPad: mở bằng Safari, bấm nút Chia sẻ rồi chọn “Thêm vào MH chính”.',
-      shareLink: 'Chia sẻ link phòng', shareText: 'Tham gia cuộc gọi video của mình trên P2P11',
+      shareLink: 'Chia sẻ link phòng',
       chat: 'Trò chuyện', chatPh: 'Nhập tin nhắn…', send: 'Gửi',
       footerOss: 'Mã nguồn mở trên GitHub:',
       share: 'Chia sẻ màn hình', shareStop: 'Dừng chia sẻ màn hình',
@@ -262,13 +262,13 @@
     en: {
       sub: 'Direct connection between two browsers. No video is stored on any server.',
       create: 'Create new room', or: 'or enter a room code', codePh: 'Room code', join: 'Join room',
-      room: 'Room', copy: 'Copy link', copied: 'Copied', copyPrompt: 'Copy this link:',
+      room: 'Room', copied: 'Copied', copyPrompt: 'Copy this link:',
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
       more: 'More', sharingNow: 'sharing your screen',
       react: 'Reactions', handRaise: 'Raise hand', handLower: 'Lower hand', remoteHandUp: 'The other person raised their hand', remoteHandDown: 'The other person lowered their hand',
       install: 'Install as an app', iosHint: 'To install on iPhone/iPad: open in Safari, tap Share, then “Add to Home Screen”.',
-      shareLink: 'Share room link', shareText: 'Join my video call on P2P11',
+      shareLink: 'Share room link',
       chat: 'Chat', chatPh: 'Type a message…', send: 'Send',
       footerOss: 'Open source on GitHub:',
       share: 'Share screen', shareStop: 'Stop sharing screen',
@@ -303,7 +303,6 @@
     micOff: '<path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/><line x1="3" y1="3" x2="21" y2="21"/>',
     cam: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/>',
     camOff: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/><line x1="3" y1="3" x2="21" y2="21"/>',
-    link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
     check: '<path d="M20 6L9 17l-5-5"/>',
     expand: '<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>',
     shrink: '<path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>',
@@ -322,7 +321,6 @@
     btn.setAttribute('aria-label', label);
     btn.title = label;
   }
-  const setCopy = done => setLabeled($('copy'), done ? 'check' : 'link', t(done ? 'copied' : 'copy'));
 
   let statusKey = null, statusRaw = '';
   const setStatus = (key, raw = '') => { statusKey = key; statusRaw = raw; renderStatus(); };
@@ -345,7 +343,6 @@
     const camOff = $('cam').getAttribute('aria-pressed') === 'true';
     setLabeled($('mic'), micOff ? 'micOff' : 'mic', t(micOff ? 'micOff' : 'micOn'));
     setLabeled($('cam'), camOff ? 'camOff' : 'cam', t(camOff ? 'camOff' : 'camOn'));
-    setCopy(false);
     renderStatus();
     $('err').textContent = errKey ? t(errKey) : '';
     $('devErr').textContent = devErrKey ? t(devErrKey) : '';
@@ -362,7 +359,7 @@
   };
 
   // ---------- Call logic ----------
-  const PREFIX = 'vcall-';
+  const PREFIX = 'p2p11-';
   // Add a TURN server here if you need calls over restrictive networks (mobile data / NAT):
   const PEER_OPTS = { config: { iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
@@ -490,11 +487,6 @@
   $('join').onclick = () => enter($('code').value);
   $('code').addEventListener('keydown', e => { if (e.key === 'Enter') enter($('code').value); });
   $('hang').onclick = leave;
-  $('copy').onclick = async () => {
-    try { await navigator.clipboard.writeText(location.href); setCopy(true); }
-    catch (_) { prompt(t('copyPrompt'), location.href); }
-    setTimeout(() => setCopy(false), 1800);
-  };
   toggle($('mic'), 'audio');
   toggle($('cam'), 'video');
 
@@ -833,11 +825,24 @@
   // iOS Safari has no install prompt, so show the manual steps instead.
   if (isIOS && !isStandalone()) $('iosHint').hidden = false;
 
-  // ---------- Quick share of the room link (Web Share API: opens the system share sheet) ----------
-  if (!navigator.share) $('shareLinkBtn').style.display = 'none'; // e.g. Firefox desktop; Copy link still works
+  // ---------- Quick share of the room link ----------
+  // Opens the system share sheet with just the URL. Browsers without the Web Share API (for example
+  // Firefox on desktop) copy the link to the clipboard instead, so there is always a way to share it.
+  const shareIcon = $('shareLinkBtn').innerHTML;
+  function flashCopied() {
+    const btn = $('shareLinkBtn');
+    btn.innerHTML = ico('check');
+    btn.setAttribute('aria-label', t('copied'));
+    btn.title = t('copied');
+    setTimeout(() => { btn.innerHTML = shareIcon; render(); }, 1800); // render() restores the label
+  }
   $('shareLinkBtn').onclick = async () => {
-    try { await navigator.share({ title: 'P2P11', text: t('shareText'), url: location.href }); }
-    catch (e) { if (e.name !== 'AbortError') $('copy').click(); } // share failed: fall back to copying the link
+    if (navigator.share) {
+      try { await navigator.share({ url: location.href }); return; }
+      catch (e) { if (e.name === 'AbortError') return; } // any other error: fall back to copying
+    }
+    try { await navigator.clipboard.writeText(location.href); flashCopied(); }
+    catch (_) { prompt(t('copyPrompt'), location.href); }
   };
 
   // ---------- Speaking indicator and mic level ----------
