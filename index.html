@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>p2p-live</title>
+<style>
+  :root {
+    --bg: #e8edf1; --ink: #14212b; --muted: #5b6b78; --panel: #ffffff;
+    --accent: #0e7c86; --accent-ink: #ffffff; --danger: #c2412d; --stage: #101a22;
+    --line: #cfd8df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0d1419; --ink: #e6edf2; --muted: #8fa1ae; --panel: #16212a; --line: #26343f; --stage: #05090c; --accent: #2bb3bf; --accent-ink: #04161a; }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  button, input { font: inherit; color: inherit; }
+  .lobby { min-height: 100%; display: grid; place-items: center; padding: 24px; position: relative; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 28px; width: min(420px, 100%); }
+  h1 { margin: 0 0 6px; font-size: 1.6rem; letter-spacing: -0.01em; }
+  p.sub { margin: 0 0 22px; color: var(--muted); }
+  .btn { border: 0; border-radius: 10px; padding: 12px 18px; cursor: pointer; background: var(--accent); color: var(--accent-ink); font-weight: 600; width: 100%; }
+  .btn:focus-visible, .ctl:focus-visible, .lang:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .or { text-align: center; color: var(--muted); margin: 16px 0; font-size: .9rem; }
+  .row { display: flex; gap: 8px; }
+  input { flex: 1; min-width: 0; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); background: transparent; }
+  .row .btn { width: auto; background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .err { color: var(--danger); margin: 14px 0 0; min-height: 1.4em; font-size: .92rem; }
+  .lang { position: absolute; top: 16px; right: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; font-size: .9rem; }
+
+  .call { display: none; position: fixed; inset: 0; background: var(--stage); }
+  .call.on { display: block; }
+  #remote { width: 100%; height: 100%; object-fit: contain; background: var(--stage); }
+  #local { position: absolute; right: 16px; bottom: 92px; width: min(28vw, 220px); aspect-ratio: 4/3; object-fit: cover; border-radius: 12px; border: 2px solid rgba(255,255,255,.25); background: #000; transform: scaleX(-1); }
+  .status { position: absolute; top: 16px; left: 16px; right: 16px; display: flex; gap: 10px; align-items: center; justify-content: space-between; color: #fff; }
+  .pill { background: rgba(0,0,0,.55); padding: 8px 14px; border-radius: 999px; font-size: .92rem; }
+  .pill button { background: none; border: 0; color: #fff; text-decoration: underline; cursor: pointer; padding: 0 0 0 8px; }
+  .bar { position: absolute; left: 0; right: 0; bottom: 20px; display: flex; justify-content: center; gap: 12px; }
+  .ctl { border: 0; border-radius: 999px; padding: 12px 20px; background: rgba(255,255,255,.14); color: #fff; cursor: pointer; font-weight: 600; }
+  .ctl[aria-pressed="true"] { background: #fff; color: #111; }
+  .ctl.hang { background: var(--danger); }
+</style>
+</head>
+<body>
+
+<main class="lobby" id="lobby">
+  <button class="lang" id="lang" type="button" aria-label="Language / Ngôn ngữ"></button>
+  <div class="card">
+    <h1>p2p-live</h1>
+    <p class="sub" data-i18n="sub"></p>
+    <button class="btn" id="create" data-i18n="create"></button>
+    <div class="or" data-i18n="or"></div>
+    <div class="row">
+      <input id="code" autocomplete="off" maxlength="12" data-i18n-ph="codePh" data-i18n-aria="codePh">
+      <button class="btn" id="join" data-i18n="join"></button>
+    </div>
+    <p class="err" id="err" role="alert"></p>
+  </div>
+</main>
+
+<section class="call" id="call">
+  <video id="remote" autoplay playsinline></video>
+  <video id="local" autoplay playsinline muted></video>
+  <div class="status">
+    <span class="pill" id="status"></span>
+    <span class="pill"><span data-i18n="room"></span> <b id="roomName"></b><button id="copy"></button></span>
+  </div>
+  <div class="bar">
+    <button class="ctl" id="mic" aria-pressed="false"></button>
+    <button class="ctl" id="cam" aria-pressed="false"></button>
+    <button class="ctl hang" id="hang" data-i18n="hang"></button>
+  </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+
+  // ---------- i18n ----------
+  const STR = {
+    vi: {
+      sub: 'Kết nối trực tiếp giữa hai trình duyệt, không lưu video trên máy chủ.',
+      create: 'Tạo phòng mới', or: 'hoặc nhập mã phòng', codePh: 'Mã phòng', join: 'Vào phòng',
+      room: 'Phòng', copy: 'Sao chép link', copied: 'Đã sao chép', copyPrompt: 'Sao chép link này:',
+      micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
+      switchTo: 'English',
+      needCode: 'Hãy nhập mã phòng.',
+      noMedia: 'Không truy cập được camera/mic. Hãy cho phép quyền trong trình duyệt rồi thử lại.',
+      creating: 'Đang tạo phòng…', waiting: 'Đang chờ người kia vào… Gửi link cho họ.',
+      connecting: 'Đang kết nối…', connected: 'Đã kết nối', left: 'Người kia đã rời phòng',
+      'peer-unavailable': 'Không tìm thấy phòng. Người tạo phòng có thể đã thoát.',
+      network: 'Mất kết nối tới máy chủ báo hiệu.',
+      'server-error': 'Máy chủ báo hiệu đang lỗi, hãy thử lại sau.',
+      error: 'Lỗi: '
+    },
+    en: {
+      sub: 'Direct connection between two browsers. No video is stored on any server.',
+      create: 'Create new room', or: 'or enter a room code', codePh: 'Room code', join: 'Join room',
+      room: 'Room', copy: 'Copy link', copied: 'Copied', copyPrompt: 'Copy this link:',
+      micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
+      switchTo: 'Tiếng Việt',
+      needCode: 'Please enter a room code.',
+      noMedia: 'Could not access the camera/mic. Allow permission in your browser and try again.',
+      creating: 'Creating room…', waiting: 'Waiting for the other person… Send them the link.',
+      connecting: 'Connecting…', connected: 'Connected', left: 'The other person left the room',
+      'peer-unavailable': 'Room not found. The host may have left.',
+      network: 'Lost connection to the signaling server.',
+      'server-error': 'The signaling server has an error, please try again later.',
+      error: 'Error: '
+    }
+  };
+
+  let lang = 'vi';
+  try { lang = localStorage.getItem('lang') || ''; } catch (_) {}
+  if (!STR[lang]) lang = (navigator.language || 'vi').toLowerCase().startsWith('vi') ? 'vi' : 'en';
+  const t = k => STR[lang][k] || k;
+
+  let statusKey = null, statusRaw = '';
+  const setStatus = (key, raw = '') => { statusKey = key; statusRaw = raw; renderStatus(); };
+  const renderStatus = () => { $('status').textContent = statusKey ? (statusKey === 'error' ? t('error') + statusRaw : t(statusKey)) : ''; };
+  let errKey = null;
+  const showErr = key => { errKey = key; $('err').textContent = key ? t(key) : ''; };
+
+  function render() {
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i18n]').forEach(el => el.textContent = t(el.dataset.i18n));
+    document.querySelectorAll('[data-i18n-ph]').forEach(el => el.placeholder = t(el.dataset.i18nPh));
+    document.querySelectorAll('[data-i18n-aria]').forEach(el => el.setAttribute('aria-label', t(el.dataset.i18nAria)));
+    $('lang').textContent = t('switchTo');
+    $('copy').textContent = t('copy');
+    $('mic').textContent = t($('mic').getAttribute('aria-pressed') === 'true' ? 'micOff' : 'micOn');
+    $('cam').textContent = t($('cam').getAttribute('aria-pressed') === 'true' ? 'camOff' : 'camOn');
+    renderStatus();
+    $('err').textContent = errKey ? t(errKey) : '';
+  }
+
+  $('lang').onclick = () => {
+    lang = lang === 'vi' ? 'en' : 'vi';
+    try { localStorage.setItem('lang', lang); } catch (_) {}
+    render();
+  };
+
+  // ---------- Call logic ----------
+  const PREFIX = 'vcall-';
+  // Add a TURN server here if you need calls over restrictive networks (mobile data / NAT):
+  const PEER_OPTS = { config: { iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' }
+  ] } };
+
+  let stream, peer, call, room;
+
+  const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
+  const makeCode = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), n => alphabet[n % alphabet.length]).join('');
+  const clean = s => s.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  async function enter(code) {
+    room = clean(code);
+    if (!room) return showErr('needCode');
+    showErr(null);
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: { echoCancellation: true, noiseSuppression: true } });
+    } catch (e) {
+      return showErr('noMedia');
+    }
+    location.hash = room;
+    $('local').srcObject = stream;
+    $('roomName').textContent = room;
+    $('lobby').style.display = 'none';
+    $('call').classList.add('on');
+    startAsHost();
+  }
+
+  // The first person into a room keeps its ID; if the ID is taken, become the guest and call it.
+  function startAsHost() {
+    setStatus('creating');
+    peer = new Peer(PREFIX + room, PEER_OPTS);
+    peer.on('open', () => setStatus('waiting'));
+    peer.on('call', c => { c.answer(stream); bind(c); });
+    peer.on('error', err => {
+      if (err.type === 'unavailable-id') { peer.destroy(); startAsGuest(); }
+      else fail(err);
+    });
+  }
+
+  function startAsGuest() {
+    setStatus('connecting');
+    peer = new Peer(PEER_OPTS);
+    peer.on('open', () => bind(peer.call(PREFIX + room, stream)));
+    peer.on('error', err => fail(err));
+  }
+
+  function bind(c) {
+    call = c;
+    c.on('stream', s => { $('remote').srcObject = s; setStatus('connected'); });
+    c.on('close', () => { $('remote').srcObject = null; setStatus('left'); });
+    c.on('error', fail);
+  }
+
+  function fail(err) {
+    if (STR[lang][err.type]) setStatus(err.type);
+    else setStatus('error', err.type || err.message);
+  }
+
+  function leave() {
+    try { call && call.close(); peer && peer.destroy(); } catch (_) {}
+    stream && stream.getTracks().forEach(tr => tr.stop());
+    history.replaceState(null, '', location.pathname);
+    location.reload();
+  }
+
+  function toggle(btn, kind) {
+    btn.addEventListener('click', () => {
+      const tracks = kind === 'audio' ? stream.getAudioTracks() : stream.getVideoTracks();
+      const off = btn.getAttribute('aria-pressed') !== 'true';
+      tracks.forEach(tr => tr.enabled = !off);
+      btn.setAttribute('aria-pressed', off);
+      render();
+    });
+  }
+
+  $('create').onclick = () => enter(makeCode());
+  $('join').onclick = () => enter($('code').value);
+  $('code').addEventListener('keydown', e => { if (e.key === 'Enter') enter($('code').value); });
+  $('hang').onclick = leave;
+  $('copy').onclick = async () => {
+    try { await navigator.clipboard.writeText(location.href); $('copy').textContent = t('copied'); }
+    catch (_) { prompt(t('copyPrompt'), location.href); }
+    setTimeout(() => $('copy').textContent = t('copy'), 1800);
+  };
+  toggle($('mic'), 'audio');
+  toggle($('cam'), 'video');
+
+  // Opened via a room link: prefill the code and wait for a click so the browser can ask for camera permission.
+  const fromHash = clean(location.hash.slice(1));
+  if (fromHash) $('code').value = fromHash;
+
+  render();
+})();
+</script>
+</body>
+</html>
