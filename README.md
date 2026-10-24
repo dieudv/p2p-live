@@ -10,6 +10,7 @@ A 1-to-1 video calling app that runs entirely in the browser and connects peers 
 - One-click room creation, shared via link or room code
 - Mute/unmute mic, turn camera on/off, hang up
 - Switch camera, microphone and speaker during a call, even while connected
+- Quick share button that opens the system share sheet with the room link (where the browser supports the Web Share API, mostly phones and tablets, plus Chrome/Edge/Safari on desktop); "Copy link" is always available
 - Text chat over the same peer-to-peer connection: messages go straight between the two browsers and are not stored anywhere, so history is lost when the page closes
 - Screen sharing on desktop browsers: your screen replaces your camera for the other person, who sees it unmirrored so shared text stays readable; stop from the button or the browser's own "Stop sharing" bar
 - Fullscreen and Picture-in-Picture (floating window) for the remote video, shown only where the browser supports them. On desktop Chrome/Edge the floating window uses the Document Picture-in-Picture API, so the mirror view carries over; other browsers use the standard video Picture-in-Picture, which cannot be mirrored

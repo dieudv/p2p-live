@@ -116,7 +116,7 @@
   <div class="status">
     <span class="pill" id="status"></span>
     <span class="pill" id="timer" role="timer" data-i18n-label="timerLbl" hidden>00:00</span>
-    <span class="pill"><span data-i18n="room"></span> <b id="roomName"></b><button id="copy"></button></span>
+    <span class="pill"><span data-i18n="room"></span> <b id="roomName"></b><button id="copy"></button><button id="shareLinkBtn" data-i18n-label="shareLink"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button></span>
   </div>
   <div class="panel" id="devPanel" role="dialog" aria-labelledby="devTitle">
     <h2 id="devTitle" data-i18n="devices"></h2>
@@ -165,6 +165,7 @@
       room: 'Phòng', copy: 'Sao chép link', copied: 'Đã sao chép', copyPrompt: 'Sao chép link này:',
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
+      shareLink: 'Chia sẻ link phòng', shareText: 'Tham gia cuộc gọi video của mình trên p2p-live',
       chat: 'Trò chuyện', chatPh: 'Nhập tin nhắn…', send: 'Gửi',
       footerOss: 'Mã nguồn mở trên GitHub:',
       share: 'Chia sẻ màn hình', shareStop: 'Dừng chia sẻ màn hình',
@@ -192,6 +193,7 @@
       room: 'Room', copy: 'Copy link', copied: 'Copied', copyPrompt: 'Copy this link:',
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
+      shareLink: 'Share room link', shareText: 'Join my video call on p2p-live',
       chat: 'Chat', chatPh: 'Type a message…', send: 'Send',
       footerOss: 'Open source on GitHub:',
       share: 'Share screen', shareStop: 'Stop sharing screen',
@@ -711,6 +713,13 @@
     updateShareButton();
   }
   $('shareBtn').onclick = startShare;
+
+  // ---------- Quick share of the room link (Web Share API: opens the system share sheet) ----------
+  if (!navigator.share) $('shareLinkBtn').style.display = 'none'; // e.g. Firefox desktop; Copy link still works
+  $('shareLinkBtn').onclick = async () => {
+    try { await navigator.share({ title: 'p2p-live', text: t('shareText'), url: location.href }); }
+    catch (e) { if (e.name !== 'AbortError') $('copy').click(); } // share failed: fall back to copying the link
+  };
 
   // ---------- Text chat ----------
   // Messages travel over the same encrypted peer-to-peer data channel as the screen-share signal.
