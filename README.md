@@ -10,6 +10,7 @@ A 1-to-1 video calling app that runs entirely in the browser and connects peers 
 - One-click room creation, shared via link or room code
 - Mute/unmute mic, turn camera on/off, hang up
 - Switch camera, microphone and speaker during a call, even while connected
+- Text chat over the same peer-to-peer connection: messages go straight between the two browsers and are not stored anywhere, so history is lost when the page closes
 - Screen sharing on desktop browsers: your screen replaces your camera for the other person, who sees it unmirrored so shared text stays readable; stop from the button or the browser's own "Stop sharing" bar
 - Fullscreen and Picture-in-Picture (floating window) for the remote video, shown only where the browser supports them. On desktop Chrome/Edge the floating window uses the Document Picture-in-Picture API, so the mirror view carries over; other browsers use the standard video Picture-in-Picture, which cannot be mirrored
 - Keeps the screen awake during a call (Screen Wake Lock), so phones and laptops don't dim or sleep mid-conversation
@@ -81,14 +82,13 @@ Note: TURN credentials placed in a static file are publicly visible. For a serio
 
 - Only 2 participants per room
 - Depends on PeerJS's free public signaling server, with no uptime guarantee
-- No text chat, screen sharing, or room password yet
+- No room password yet
 - Internet access is required to load the page and exchange signaling, even though the video itself may travel over the LAN
 
 ## Roadmap
 
 - Longer room codes and optional room passwords
 - Self-hosted signaling with Cloudflare Durable Objects (WebSocket)
-- Text chat and screen sharing
 
 ## Checking which path a call uses
 

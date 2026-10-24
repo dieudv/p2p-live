@@ -71,6 +71,20 @@
   #timer { font-variant-numeric: tabular-nums; }
   .panel label.check { display: flex; align-items: center; gap: 10px; color: #fff; }
   .panel input[type="checkbox"] { flex: none; width: 18px; height: 18px; margin: 0; padding: 0; accent-color: var(--accent); }
+  .ctl { position: relative; }
+  .badge { position: absolute; top: -2px; right: -2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--danger); color: #fff; font-size: .72rem; line-height: 18px; font-weight: 700; text-align: center; }
+  .msgs { display: flex; flex-direction: column; gap: 6px; max-height: min(32vh, 260px); overflow-y: auto; margin-bottom: 10px; }
+  .msg { max-width: 85%; padding: 7px 11px; border-radius: 12px; font-size: .92rem; line-height: 1.35; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .msg.mine { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 4px; }
+  .msg.theirs { align-self: flex-start; background: rgba(255,255,255,.14); color: #fff; border-bottom-left-radius: 4px; }
+  .msg.sys { align-self: center; background: none; color: #b9c6d0; font-size: .8rem; max-width: 100%; }
+  .msg time { display: block; font-size: .7rem; opacity: .7; margin-top: 2px; }
+  .chatrow { display: flex; gap: 8px; }
+  .chatrow input { color: #fff; border-color: rgba(255,255,255,.25); }
+  .chatrow input:disabled, .send:disabled { opacity: .45; cursor: not-allowed; }
+  .send { flex: none; width: 44px; height: 44px; border: 0; border-radius: 10px; background: var(--accent); color: var(--accent-ink); cursor: pointer; display: grid; place-items: center; }
+  .send svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .send:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
   .ctl:disabled { opacity: .4; cursor: not-allowed; }
   @media (max-width: 600px) { #local { bottom: 144px; width: 32vw; } .panel { bottom: 144px; } }
 </style>
@@ -113,6 +127,14 @@
     <label class="check"><input type="checkbox" id="mirrorChk"><span data-i18n="lblMirror"></span></label>
     <p class="err" id="devErr" role="alert"></p>
   </div>
+  <div class="panel" id="chatPanel" role="dialog" aria-labelledby="chatTitle">
+    <h2 id="chatTitle" data-i18n="chat"></h2>
+    <div class="msgs" id="msgs" role="log" aria-live="polite"></div>
+    <div class="chatrow">
+      <input id="chatInput" maxlength="1000" autocomplete="off" disabled data-i18n-ph="chatPh" data-i18n-aria="chatPh">
+      <button class="send" id="chatSend" disabled data-i18n-label="send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+    </div>
+  </div>
   <div class="panel" id="infoPanel" role="dialog" aria-labelledby="infoTitle">
     <h2 id="infoTitle" data-i18n="infoTitle"></h2>
     <div id="infoBody"></div>
@@ -120,6 +142,7 @@
   <div class="bar">
     <button class="ctl" id="mic" aria-pressed="false"></button>
     <button class="ctl" id="cam" aria-pressed="false"></button>
+    <button class="ctl" id="chatBtn" aria-expanded="false" aria-controls="chatPanel" data-i18n-label="chat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="badge" id="chatBadge" hidden></span></button>
     <button class="ctl" id="shareBtn" aria-pressed="false" disabled></button>
     <button class="ctl" id="pipBtn" aria-pressed="false" disabled></button>
     <button class="ctl" id="fsBtn" aria-pressed="false"></button>
@@ -142,6 +165,7 @@
       room: 'Phòng', copy: 'Sao chép link', copied: 'Đã sao chép', copyPrompt: 'Sao chép link này:',
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
+      chat: 'Trò chuyện', chatPh: 'Nhập tin nhắn…', send: 'Gửi',
       footerOss: 'Mã nguồn mở trên GitHub:',
       share: 'Chia sẻ màn hình', shareStop: 'Dừng chia sẻ màn hình',
       lblSound: 'Âm báo khi có người vào hoặc rời', timerLbl: 'Thời gian cuộc gọi',
@@ -168,6 +192,7 @@
       room: 'Room', copy: 'Copy link', copied: 'Copied', copyPrompt: 'Copy this link:',
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
+      chat: 'Chat', chatPh: 'Type a message…', send: 'Send',
       footerOss: 'Open source on GitHub:',
       share: 'Share screen', shareStop: 'Stop sharing screen',
       lblSound: 'Sound when someone joins or leaves', timerLbl: 'Call duration',
@@ -207,6 +232,7 @@
     shrink: '<path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>',
     pip: '<rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="12" width="6" height="4" rx="1"/>',
     screen: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/><path d="M12 12V8M9.5 10.5L12 8l2.5 2.5"/>'
+  
   };
   const ico = name => '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[name] + '</svg>';
   function setLabeled(btn, iconName, label) {
@@ -515,12 +541,17 @@
   }
 
   function togglePanel(which) {
-    const map = { dev: [$('devPanel'), $('devBtn')], info: [$('infoPanel'), $('infoBtn')] };
+    const map = { dev: [$('devPanel'), $('devBtn')], info: [$('infoPanel'), $('infoBtn')], chat: [$('chatPanel'), $('chatBtn')] };
     Object.entries(map).forEach(([k, [panel, btn]]) => {
       const on = k === which && !panel.classList.contains('on');
       panel.classList.toggle('on', on);
       btn.setAttribute('aria-expanded', on);
     });
+    if (which === 'chat' && $('chatPanel').classList.contains('on')) {
+      unread = 0; renderBadge();
+      $('msgs').scrollTop = $('msgs').scrollHeight;
+      setTimeout(() => $('chatInput').focus(), 0);
+    }
     clearInterval(statsTimer);
     if (which === 'info' && $('infoPanel').classList.contains('on')) { statsTimer = setInterval(pollStats, 1000); pollStats(); }
   }
@@ -626,10 +657,13 @@
 
   function sendCtl(msg) {
     const c = guestConn || gateConn;
-    try { if (c && c.open) c.send(msg); } catch (_) {}
+    try { if (c && c.open) { c.send(msg); return true; } } catch (_) {}
+    return false;
   }
   function onCtl(d) {
-    if (!d || d.type !== 'share') return;
+    if (!d) return;
+    if (d.type === 'chat') return onChat(d);
+    if (d.type !== 'share') return;
     remoteShare = !!d.on;
     $('call').classList.toggle('remote-share', remoteShare);
     pipMirrorStyle();
@@ -638,6 +672,7 @@
     setLabeled($('shareBtn'), 'screen', t(sharing ? 'shareStop' : 'share'));
     $('shareBtn').setAttribute('aria-pressed', sharing);
     $('shareBtn').disabled = !sharing && !startedAt; // needs a connected call
+    updateChatState();
   }
 
   async function startShare() {
@@ -676,6 +711,64 @@
     updateShareButton();
   }
   $('shareBtn').onclick = startShare;
+
+  // ---------- Text chat ----------
+  // Messages travel over the same encrypted peer-to-peer data channel as the screen-share signal.
+  // They are only kept in this page's memory and are gone when the page closes.
+  const CHAT_MAX = 1000;
+  let unread = 0;
+
+  function renderBadge() {
+    $('chatBadge').hidden = unread === 0;
+    $('chatBadge').textContent = unread > 9 ? '9+' : String(unread);
+  }
+  function updateChatState() {
+    const on = !!startedAt; // needs a connected call
+    $('chatInput').disabled = !on;
+    $('chatSend').disabled = !on;
+  }
+  function pushMsg(el) {
+    const box = $('msgs');
+    const stick = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
+    box.append(el);
+    while (box.children.length > 200) box.firstChild.remove();
+    if (stick || el.classList.contains('mine')) box.scrollTop = box.scrollHeight;
+  }
+  function addMsg(text, mine) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + (mine ? 'mine' : 'theirs');
+    div.append(document.createTextNode(text)); // text only, never HTML
+    const tm = document.createElement('time');
+    tm.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    div.append(tm);
+    pushMsg(div);
+  }
+  function addSys(text) {
+    const div = document.createElement('div');
+    div.className = 'msg sys';
+    div.textContent = text;
+    pushMsg(div);
+  }
+  function onChat(d) {
+    if (typeof d.text !== 'string') return;
+    const text = d.text.slice(0, CHAT_MAX).trim();
+    if (!text) return;
+    addMsg(text, false);
+    if (!$('chatPanel').classList.contains('on')) { unread++; renderBadge(); }
+    playTone([740]);
+  }
+  function sendChat() {
+    const input = $('chatInput');
+    const text = input.value.trim().slice(0, CHAT_MAX);
+    if (!text || !startedAt) return;
+    if (sendCtl({ type: 'chat', text })) { addMsg(text, true); input.value = ''; }
+  }
+  $('chatSend').onclick = sendChat;
+  $('chatInput').addEventListener('keydown', e => {
+    // isComposing keeps Enter from sending while a Vietnamese/CJK input method is still composing.
+    if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); sendChat(); }
+  });
+  $('chatBtn').onclick = () => togglePanel('chat');
 
   // ---------- Call timer and join/leave sounds ----------
   try { soundOn = localStorage.getItem('sound') !== '0'; } catch (_) {}
@@ -726,6 +819,7 @@
     startedAt = null;
     updateShareButton();
     $('timer').hidden = true;
+    if ($('msgs').children.length) addSys(t('left'));
     playTone([660, 440]);
   }
 
