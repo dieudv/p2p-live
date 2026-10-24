@@ -47,7 +47,7 @@
   .call { display: none; position: fixed; inset: 0; background: var(--stage); }
   .call.on { display: block; }
   #remote { width: 100%; height: 100%; object-fit: contain; background: var(--stage); }
-  #local { position: absolute; right: 16px; bottom: 92px; width: min(28vw, 220px); height: auto; max-height: 40vh; object-fit: contain; border-radius: 12px; border: 2px solid rgba(255,255,255,.25); background: #000; }
+  #local { position: absolute; right: 16px; bottom: var(--lb); width: var(--lw); height: auto; max-height: 40vh; object-fit: contain; border-radius: 12px; border: 2px solid rgba(255,255,255,.25); background: #000; }
   .status { position: absolute; top: 16px; left: 16px; right: 16px; display: flex; gap: 10px; align-items: center; justify-content: space-between; color: #fff; }
   .pill { background: rgba(0,0,0,.55); padding: 8px 14px; border-radius: 999px; font-size: .92rem; }
   .pill button { background: none; border: 0; color: #fff; text-decoration: underline; cursor: pointer; padding: 0 0 0 8px; }
@@ -95,8 +95,17 @@
   .send { flex: none; width: 44px; height: 44px; border: 0; border-radius: 10px; background: var(--accent); color: var(--accent-ink); cursor: pointer; display: grid; place-items: center; }
   .send svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .send:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  #mic::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: 6px; height: 3px; border-radius: 2px; background: #4ade80; transform: scaleX(var(--lvl, 0)); transform-origin: left center; transition: transform .08s linear; }
+  #mic[aria-pressed="true"]::after { display: none; }
+  .call { --lw: min(28vw, 220px); --lb: 92px; } /* local video width and bottom offset, shared with the badges */
+  .vu { position: absolute; z-index: 2; width: 28px; height: 28px; border-radius: 50%; background: #0e7c86; box-shadow: 0 0 0 2px rgba(255,255,255,.85); display: flex; align-items: center; justify-content: center; gap: 2px; opacity: 0; transform: scale(.8); transition: opacity .15s, transform .15s; pointer-events: none; }
+  .vu.on { opacity: 1; transform: none; }
+  .vu i { display: block; width: 3px; height: 4px; border-radius: 2px; background: #fff; transition: height .1s linear; }
+  #vuRemote { left: 16px; bottom: var(--lb); }
+  #vuLocal { right: calc(var(--lw) - 20px); bottom: calc(var(--lb) + 8px); }
+  @media (prefers-reduced-motion: reduce) { #mic::after, .vu, .vu i { transition: none; } }
   .ctl:disabled { opacity: .4; cursor: not-allowed; }
-  @media (max-width: 600px) { #local { bottom: 144px; width: 32vw; } .panel { bottom: 144px; } }
+  @media (max-width: 600px) { .call { --lw: 32vw; --lb: 144px; } .panel { bottom: 144px; } }
 </style>
 </head>
 <body>
@@ -125,6 +134,8 @@
 <section class="call mirror" id="call">
   <video id="remote" autoplay playsinline></video>
   <video id="local" autoplay playsinline muted></video>
+  <div class="vu" id="vuRemote" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="vu" id="vuLocal" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="status">
     <span class="pill" id="status"></span>
     <span class="pill" id="timer" role="timer" data-i18n-label="timerLbl" hidden>00:00</span>
@@ -327,6 +338,7 @@
     inCall = true;
     keepAwake();
     try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch (_) {}
+    setLocalMeter();
     $('local').srcObject = stream;
     $('roomName').textContent = room;
     $('lobby').style.display = 'none';
@@ -385,8 +397,8 @@
 
   function bind(c) {
     call = c; prev = {};
-    c.on('stream', s => { $('remote').srcObject = s; setStatus('connected'); startTimer(); });
-    c.on('close', () => { $('remote').srcObject = null; setStatus('left'); stopTimer(); stopShare(false); onCtl({ type: 'share', on: false }); });
+    c.on('stream', s => { $('remote').srcObject = s; setStatus('connected'); startTimer(); setRemoteMeter(s); });
+    c.on('close', () => { $('remote').srcObject = null; setStatus('left'); stopTimer(); stopShare(false); onCtl({ type: 'share', on: false }); setRemoteMeter(null); });
     c.on('error', fail);
   }
 
@@ -475,6 +487,7 @@
       const nt = ns.getTracks()[0];
       nt.enabled = wasEnabled;
       stream.addTrack(nt);
+      if (kind === 'audio') setLocalMeter(); // the analyser must follow the new microphone
       const pc = call && call.peerConnection;
       const sender = pc && pc.getSenders().find(x => x.track && x.track.kind === kind);
       if (sender && !(sharing && kind === 'video')) { try { await sender.replaceTrack(nt); } catch (_) {} }
@@ -763,6 +776,61 @@
     try { await navigator.share({ title: 'P2P11', text: t('shareText'), url: location.href }); }
     catch (e) { if (e.name !== 'AbortError') $('copy').click(); } // share failed: fall back to copying the link
   };
+
+  // ---------- Speaking indicator and mic level ----------
+  // Web Audio analysers read the volume of your mic and of the other person's audio 10 times a second.
+  // They are not connected to the speakers, so nothing is played twice, and nothing is sent anywhere.
+  const meters = { local: null, remote: null };
+  const SPEAK_ON = 0.03, HOLD_MS = 450; // volume that counts as speaking, and how long the indicator lingers
+
+  function makeMeter(ms) {
+    if (!audioCtx || !ms || !ms.getAudioTracks().length) return null;
+    try {
+      const src = audioCtx.createMediaStreamSource(new MediaStream(ms.getAudioTracks()));
+      const an = audioCtx.createAnalyser();
+      an.fftSize = 512;
+      src.connect(an);
+      return { src, an, buf: new Uint8Array(an.fftSize), level: 0, speaking: false, last: 0 };
+    } catch (_) { return null; }
+  }
+  function dropMeter(m) { if (m) { try { m.src.disconnect(); } catch (_) {} } }
+  function setLocalMeter() { dropMeter(meters.local); meters.local = makeMeter(stream); }
+  function setRemoteMeter(ms) { dropMeter(meters.remote); meters.remote = makeMeter(ms); }
+
+  function readLevel(m, now) {
+    m.an.getByteTimeDomainData(m.buf);
+    let sum = 0;
+    for (let i = 0; i < m.buf.length; i++) { const v = (m.buf[i] - 128) / 128; sum += v * v; }
+    const rms = Math.sqrt(sum / m.buf.length);
+    if (rms > SPEAK_ON) m.last = now;
+    m.speaking = now - m.last < HOLD_MS;
+    const target = Math.min(1, rms * 5);
+    m.level = target > m.level ? target : m.level * 0.8 + target * 0.2; // fast attack, slow release
+  }
+  const setSpeaking = (el, on) => { if (el.classList.contains('on') !== on) el.classList.toggle('on', on); };
+  const BAR_AMP = [0.7, 1, 0.55]; // the middle bar moves the most
+  // Three-bar badge inside a video: visible only while that person speaks, bars follow the volume.
+  function showVu(el, m, now) {
+    const on = !!(m && m.speaking);
+    setSpeaking(el, on);
+    if (!on) return;
+    for (let i = 0; i < 3; i++) {
+      const wave = 0.65 + 0.35 * Math.sin(now / 110 + i * 2.1);
+      el.children[i].style.height = (4 + m.level * BAR_AMP[i] * wave * 12).toFixed(1) + 'px';
+    }
+  }
+
+  function tickMeters() {
+    if (document.hidden) return;
+    const now = performance.now(), l = meters.local, r = meters.remote;
+    if (l) readLevel(l, now);
+    if (r) readLevel(r, now);
+    const micOff = $('mic').getAttribute('aria-pressed') === 'true';
+    $('mic').style.setProperty('--lvl', (l && !micOff ? l.level : 0).toFixed(2));
+    showVu($('vuLocal'), l && !micOff ? l : null, now);
+    showVu($('vuRemote'), r, now);
+  }
+  setInterval(tickMeters, 100);
 
   // ---------- Text chat ----------
   // Messages travel over the same encrypted peer-to-peer data channel as the screen-share signal.

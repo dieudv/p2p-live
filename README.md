@@ -16,6 +16,7 @@ A 1-to-1 video calling app that runs entirely in the browser and connects peers 
 - Screen sharing on desktop browsers: your screen replaces your camera for the other person, who sees it unmirrored so shared text stays readable; stop from the button or the browser's own "Stop sharing" bar
 - Fullscreen and Picture-in-Picture (floating window) for the remote video, shown only where the browser supports them. On desktop Chrome/Edge the floating window uses the Document Picture-in-Picture API, so the mirror view carries over; other browsers use the standard video Picture-in-Picture, which cannot be mirrored
 - Keeps the screen awake during a call (Screen Wake Lock), so phones and laptops don't dim or sleep mid-conversation
+- Speaking indicator and mic level: a small animated three-bar icon appears inside the video of whoever is talking (like Google Meet), and a level bar on the mic button shows your own volume (both are computed locally, nothing is sent)
 - Call timer, plus a short chime when the other person joins and a lower one when they leave (can be turned off in the Devices panel)
 - Mirror view for both your own video and the other person's video (display only, can be turned off in the Devices panel); your own preview shows the full camera frame without cropping
 - Built-in connection info panel: connection path (LAN / direct / TURN), latency, resolution, frame rate, bitrate and packet loss
