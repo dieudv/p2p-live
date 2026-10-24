@@ -1,7 +1,5 @@
 # p2p-live
 
-[Tiếng Việt](README.vi.md) | **English**
-
 **Demo: https://p2p-live.pages.dev**
 
 A 1-to-1 video calling app that runs entirely in the browser and connects peers directly using WebRTC. The whole app is a single static `index.html` file with no backend, so it can be deployed to Cloudflare Pages, GitHub Pages, or any static hosting service.
