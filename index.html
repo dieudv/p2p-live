@@ -59,7 +59,8 @@
   .ctl svg { width: 22px; height: 22px; display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .pill button { display: inline-flex; vertical-align: middle; align-items: center; }
   .pill button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  @media (max-width: 600px) { #local { bottom: 124px; } .panel { bottom: 124px; } }
+  .ctl:disabled { opacity: .4; cursor: not-allowed; }
+  @media (max-width: 600px) { #local { bottom: 144px; } .panel { bottom: 144px; } }
 </style>
 </head>
 <body>
@@ -100,6 +101,8 @@
   <div class="bar">
     <button class="ctl" id="mic" aria-pressed="false"></button>
     <button class="ctl" id="cam" aria-pressed="false"></button>
+    <button class="ctl" id="pipBtn" aria-pressed="false" disabled></button>
+    <button class="ctl" id="fsBtn" aria-pressed="false"></button>
     <button class="ctl" id="devBtn" aria-expanded="false" aria-controls="devPanel" data-i18n-label="devices"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="9" cy="7" r="2.2"/><circle cx="15" cy="17" r="2.2"/></svg></button>
     <button class="ctl" id="infoBtn" aria-expanded="false" aria-controls="infoPanel" data-i18n-label="info"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><path d="M12 8h.01"/></svg></button>
     <button class="ctl hang" id="hang" data-i18n-label="hang"><svg viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(135deg)"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
@@ -119,6 +122,7 @@
       room: 'Phòng', copy: 'Sao chép link', copied: 'Đã sao chép', copyPrompt: 'Sao chép link này:',
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
+      fullscreen: 'Toàn màn hình', exitFullscreen: 'Thoát toàn màn hình', pip: 'Cửa sổ nổi (PiP)', pipExit: 'Đóng cửa sổ nổi',
       full: 'Phòng đã đầy. Mỗi phòng chỉ cho phép 2 người.',
       devices: 'Thiết bị', info: 'Thông tin', lblCam: 'Camera', lblMic: 'Micro', lblSpk: 'Loa',
       devDefault: 'Mặc định', devErr: 'Không đổi được thiết bị. Đã thử khôi phục thiết bị cũ.',
@@ -140,6 +144,7 @@
       room: 'Room', copy: 'Copy link', copied: 'Copied', copyPrompt: 'Copy this link:',
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
+      fullscreen: 'Fullscreen', exitFullscreen: 'Exit fullscreen', pip: 'Picture-in-Picture', pipExit: 'Exit Picture-in-Picture',
       full: 'This room is full. Only 2 people are allowed per room.',
       devices: 'Devices', info: 'Info', lblCam: 'Camera', lblMic: 'Microphone', lblSpk: 'Speaker',
       devDefault: 'Default', devErr: 'Could not switch device. Tried to restore the previous one.',
@@ -169,7 +174,10 @@
     cam: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/>',
     camOff: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/><line x1="3" y1="3" x2="21" y2="21"/>',
     link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
-    check: '<path d="M20 6L9 17l-5-5"/>'
+    check: '<path d="M20 6L9 17l-5-5"/>',
+    expand: '<path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>',
+    shrink: '<path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>',
+    pip: '<rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="12" width="6" height="4" rx="1"/>'
   };
   const ico = name => '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[name] + '</svg>';
   function setLabeled(btn, iconName, label) {
@@ -206,6 +214,7 @@
     $('devErr').textContent = devErrKey ? t(devErrKey) : '';
     loadDevices();
     renderInfo();
+    updateViewButtons();
   }
 
   $('lang').onclick = () => {
@@ -486,6 +495,43 @@
   if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
     navigator.mediaDevices.addEventListener('devicechange', loadDevices);
   }
+
+  // ---------- Fullscreen and Picture-in-Picture ----------
+  const remoteEl = $('remote');
+  const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+  const canFs = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || 'webkitEnterFullscreen' in HTMLVideoElement.prototype);
+  const canPip = !!(document.pictureInPictureEnabled && !remoteEl.disablePictureInPicture);
+  if (!canFs) $('fsBtn').style.display = 'none';
+  if (!canPip) $('pipBtn').style.display = 'none';
+
+  function updateViewButtons() {
+    const fsOn = !!fsElement();
+    setLabeled($('fsBtn'), fsOn ? 'shrink' : 'expand', t(fsOn ? 'exitFullscreen' : 'fullscreen'));
+    $('fsBtn').setAttribute('aria-pressed', fsOn);
+    const pipOn = !!document.pictureInPictureElement;
+    setLabeled($('pipBtn'), 'pip', t(pipOn ? 'pipExit' : 'pip'));
+    $('pipBtn').setAttribute('aria-pressed', pipOn);
+    // Picture-in-Picture needs a playing remote video.
+    $('pipBtn').disabled = !pipOn && remoteEl.readyState === 0;
+  }
+
+  $('fsBtn').onclick = async () => {
+    const el = $('call');
+    try {
+      if (fsElement()) await (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else if (el.requestFullscreen) await el.requestFullscreen();
+      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      else if (remoteEl.webkitEnterFullscreen) remoteEl.webkitEnterFullscreen(); // iPhone: native video player
+    } catch (_) {}
+  };
+  $('pipBtn').onclick = async () => {
+    try {
+      if (document.pictureInPictureElement) await document.exitPictureInPicture();
+      else await remoteEl.requestPictureInPicture();
+    } catch (_) {}
+  };
+  ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, updateViewButtons));
+  ['loadedmetadata', 'emptied', 'enterpictureinpicture', 'leavepictureinpicture'].forEach(ev => remoteEl.addEventListener(ev, updateViewButtons));
 
   // Opened via a room link: prefill the code and wait for a click so the browser can ask for camera permission.
   const fromHash = clean(location.hash.slice(1));
