@@ -250,6 +250,8 @@
     }
     location.hash = room;
     loadDevices();
+    inCall = true;
+    keepAwake();
     $('local').srcObject = stream;
     $('roomName').textContent = room;
     $('lobby').style.display = 'none';
@@ -317,6 +319,8 @@
 
   function leave() {
     clearInterval(statsTimer);
+    inCall = false;
+    try { wakeLock && wakeLock.release(); } catch (_) {}
     try { call && call.close(); peer && peer.destroy(); } catch (_) {}
     stream && stream.getTracks().forEach(tr => tr.stop());
     history.replaceState(null, '', location.pathname);
@@ -532,6 +536,20 @@
   };
   ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, updateViewButtons));
   ['loadedmetadata', 'emptied', 'enterpictureinpicture', 'leavepictureinpicture'].forEach(ev => remoteEl.addEventListener(ev, updateViewButtons));
+
+  // ---------- Keep the screen awake during a call (Screen Wake Lock) ----------
+  // The browser drops the lock whenever the tab is hidden, so request it again when the tab returns.
+  let wakeLock = null, inCall = false;
+  async function keepAwake() {
+    if (!('wakeLock' in navigator) || !inCall || wakeLock) return;
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch (_) { wakeLock = null; } // denied, e.g. low battery mode
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') keepAwake();
+  });
 
   // Opened via a room link: prefill the code and wait for a click so the browser can ask for camera permission.
   const fromHash = clean(location.hash.slice(1));
