@@ -503,7 +503,30 @@
     $('roomName').textContent = room;
     $('lobby').style.display = 'none';
     $('call').classList.add('on');
+    try {
+      await loadTurnServers();
+    } catch (e) {
+      console.error('[P2P11] Cannot load TURN servers:', e);
+      return showErr('error');
+    }
     startAsHost();
+  }
+
+  async function loadTurnServers() {
+    const response = await fetch(
+      'https://p2p11.metered.live/api/v1/turn/credentials?apiKey=13e1318239461c4c3fb22f7f49eeaea01004'
+    );
+
+    if (!response.ok) {
+      throw new Error(`TURN credentials HTTP ${response.status}`);
+    }
+
+    const iceServers = await response.json();
+    if (!Array.isArray(iceServers) || iceServers.length === 0) {
+      throw new Error('TURN ICE servers không hợp lệ');
+    }
+
+    PEER_OPTS.config.iceServers = iceServers;
   }
 
   // The first person into a room keeps its ID. Anyone else first asks permission over a data
