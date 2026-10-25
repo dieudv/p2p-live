@@ -340,6 +340,8 @@
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
       more: 'Thêm', sharingNow: 'đang chia sẻ màn hình',
+      webrtc: 'Không thiết lập được đường truyền giữa hai mạng. Hãy thử lại hoặc đổi mạng.',
+      connectSlow: 'Chưa kết nối được sau 20 giây. Mạng của một trong hai bên có thể chặn kết nối trực tiếp. Thử Wi-Fi khác hoặc tắt VPN.',
       pwPh: 'Mật khẩu phòng (tùy chọn)', pwHint: 'Đặt mật khẩu để chỉ người biết mật khẩu mới vào được. Mật khẩu không nằm trong link.',
       invitePw: 'Phòng có mật khẩu. Hãy gửi mật khẩu riêng cho họ, không kèm trong link.',
       pwTitle: 'Phòng này có mật khẩu', pwEnter: 'Nhập mật khẩu', pwCancel: 'Hủy', pwWrong: 'Sai mật khẩu. Hãy thử lại.',
@@ -386,6 +388,8 @@
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
       more: 'More', sharingNow: 'sharing your screen',
+      webrtc: 'Could not set up a connection between the two networks. Try again or switch network.',
+      connectSlow: 'Still not connected after 20 seconds. One of the two networks may block direct connections. Try another Wi-Fi or turn off any VPN.',
       pwPh: 'Room password (optional)', pwHint: 'Set a password so only people who know it can join. The password is not in the link.',
       invitePw: 'This room has a password. Send it to them separately, not in the link.',
       pwTitle: 'This room has a password', pwEnter: 'Enter the password', pwCancel: 'Cancel', pwWrong: 'Wrong password. Please try again.',
@@ -496,15 +500,25 @@
 
   // ---------- Call logic ----------
   const PREFIX = 'p2p11-';
-  // Add a TURN server here if you need calls over restrictive networks (mobile data / NAT):
-  const PEER_OPTS = { config: { iceServers: [
+  // The browsers always try a direct peer-to-peer path first. Many networks cannot do that (4G/5G and many home
+  // internet lines sit behind carrier-grade NAT, and some routers or firewalls block UDP). For those, ICE falls
+  // back to the free public relay (TURN) that PeerJS itself provides. Calls through it stay end-to-end encrypted
+  // (DTLS-SRTP): the relay only sees encrypted packets and IP addresses.
+  // NOTE: passing `config` REPLACES PeerJS's built-in defaults, so the relay must be listed here explicitly.
+  // Set USE_RELAY to false to forbid any relay: calls then only work when a direct path exists.
+  const USE_RELAY = true;
+  const ICE_SERVERS = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun3.l.google.com:19302' },
     { urls: 'stun:stun.cloudflare.com:3478' },
     { urls: 'stun:global.stun.twilio.com:3478' }
-  ] } };
+  ];
+  if (USE_RELAY) {
+    ICE_SERVERS.push({ urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' });
+  }
+  const PEER_OPTS = { config: { iceServers: ICE_SERVERS, iceCandidatePoolSize: 2, sdpSemantics: 'unified-plan' } };
 
   let stream, peer, call, room;
   let guestId = null, guestConn = null; // host side: the one person allowed in
@@ -588,6 +602,7 @@
     });
     peer.on('error', err => {
       if (err.type === 'unavailable-id') { peer.destroy(); startAsGuest(); }
+      else if (err.type === 'webrtc') showToast(t('webrtc')); // one failed attempt: keep waiting for the next
       else fail(err);
     });
   }
@@ -599,6 +614,8 @@
     peer.on('open', () => {
       const conn = peer.connect(PREFIX + room, { reliable: true });
       gateConn = conn;
+      // The first step needs a working path between the two networks too, so say so if it takes too long.
+      setTimeout(() => { if (!gateDone && !call && $('pwDialog').hidden) setStatus('connectSlow'); }, 20000);
       conn.on('data', d => onGate(conn, d));
       conn.on('close', () => { if (!call && !gateDone) { hidePwDialog(); setStatus('gateClosed'); } });
     });
@@ -607,6 +624,7 @@
 
   function bind(c) {
     call = c; prev = {};
+    setTimeout(() => { if (call === c && !startedAt) setStatus('connectSlow'); }, 20000);
     c.on('stream', s => { $('remote').srcObject = s; setStatus('connected'); startTimer(); setRemoteMeter(s); });
     c.on('close', () => { $('remote').srcObject = null; setStatus('left'); stopTimer(); stopShare(false); onCtl({ type: 'share', on: false }); setRemoteMeter(null); setHand(false, false); onCtl({ type: 'hand', on: false }); });
     c.on('error', fail);

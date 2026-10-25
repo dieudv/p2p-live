@@ -39,7 +39,7 @@ A 1-to-1 video calling app that runs entirely in the browser and connects peers 
 2. If that ID is already taken, the later arrival becomes the guest and calls that ID.
 3. Both sides exchange connection details (SDP, ICE) through the signaling server, then video and audio flow **directly** between the two browsers.
 
-Media streams are always encrypted by WebRTC (DTLS-SRTP) and never pass through your own server. When both devices are on the same LAN, WebRTC will usually pick the direct LAN path automatically.
+Media streams are always encrypted by WebRTC (DTLS-SRTP) and never pass through your own server. If no direct path exists, they go through PeerJS's public relay, still encrypted. When both devices are on the same LAN, WebRTC will usually pick the direct LAN path automatically.
 
 ## Run locally
 
@@ -70,18 +70,28 @@ Open `http://localhost:8080` in two tabs (or two browsers) to try it.
 
 After deploying, open the `*.pages.dev` link that Cloudflare gives you.
 
-## TURN configuration (optional)
+## Connection path and relay
 
-By default the app uses public STUN servers. When both users are on restrictive networks (mobile data, corporate networks, symmetric NAT), a direct P2P connection may fail. In that case, add a TURN server to `PEER_OPTS` in `index.html`:
+Browsers always try a direct peer-to-peer path first (same network, or a path found with the public STUN servers). Many networks cannot do that: 4G/5G and many home internet lines sit behind carrier-grade NAT, and some routers or firewalls block UDP. For those, the app falls back to the free public relay (TURN) that PeerJS provides. Calls through the relay stay end-to-end encrypted (DTLS-SRTP), so the relay only sees encrypted packets and IP addresses. It is a free community service with no uptime guarantee.
+
+Passing a custom `config` to PeerJS replaces its built-in defaults, so the relay is listed explicitly in `index.html`. To forbid any relay (calls then only work when a direct path exists), set:
 
 ```js
-const PEER_OPTS = { config: { iceServers: [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'turn:turn.example.com:3478', username: 'user', credential: 'pass' }
-] } };
+const USE_RELAY = false;
 ```
 
-Note: TURN credentials placed in a static file are publicly visible. For a serious service, issue short-lived TURN credentials from a server-side API.
+To use your own TURN server instead, edit `ICE_SERVERS` in `index.html`:
+
+```js
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'turn:turn.example.com:3478', username: 'user', credential: 'pass' }
+];
+```
+
+Credentials placed in a static file are publicly visible. For a serious service, issue short-lived credentials from a server-side API.
+
+During a call, the **Info** panel shows which path is in use ("Relayed through TURN server" when the relay carries the call). If a call is still not connected after 20 seconds, the app says so and suggests trying another network.
 
 ## Security and privacy
 
@@ -89,7 +99,7 @@ Note: TURN credentials placed in a static file are publicly visible. For a serio
 - Room password: the host sends the joiner a random challenge, the joiner answers with a keyed hash (HMAC-SHA-256) made from the password stretched with PBKDF2 (150,000 rounds), and the host then proves it knows the password too, so a fake room cannot pass for the real one. Each joiner gets 3 tries per connection and 5 failures in total lock the room for 30 seconds, doubling each time up to 10 minutes. Choose a password that is hard to guess, because a short one can still be guessed by trying; send it separately from the link. It needs HTTPS (the Web Crypto API).
 - Each room admits only one guest. The host rejects a third person, who sees a "room is full" message. Without a password, anyone who enters before the intended guest can still get in with the room code; a room password prevents that.
 - The public PeerJS signaling server can see both parties' IP addresses and connection details, but not the video or audio.
-- The two participants can learn each other's IP address. This is inherent to P2P unless TURN is used.
+- The two participants can learn each other's IP address. This is inherent to P2P unless the relay is used.
 
 ## Current limitations
 
