@@ -1786,10 +1786,62 @@
 
   // ---------- Swap the two videos ----------
   function setSwap(on) {
+    const was = swapped;
     swapped = !!on && !!startedAt; // only while connected
     $('call').classList.toggle('swap', swapped);
+    if (was && !swapped) setZoom(null); // back to normal: reset the camera zoom
     updateViewButtons();
   }
+
+  // ---------- Camera zoom (only while your own video is the big one) ----------
+  // Hardware zoom through the track constraints, so the other person sees it too. Pinch on touch screens,
+  // mouse wheel on desktop. Only where the browser reports the capability (mostly Chrome/Edge on Android).
+  let zoomBusy = false, zoomWant = null;
+  function zoomCaps() {
+    const tr = stream && stream.getVideoTracks()[0];
+    let c = {};
+    try { c = (tr && tr.getCapabilities && tr.getCapabilities()) || {}; } catch (_) {}
+    return c.zoom && !sharing ? { tr, min: c.zoom.min, max: c.zoom.max } : null;
+  }
+  const curZoom = c => (c.tr.getSettings().zoom) || c.min;
+  async function setZoom(z) { // null = reset
+    const c = zoomCaps();
+    if (!c) return;
+    zoomWant = z == null ? c.min : Math.min(c.max, Math.max(c.min, z));
+    if (zoomBusy) return; // the latest wanted value is applied when the current call finishes
+    zoomBusy = true;
+    try {
+      while (zoomWant != null) {
+        const v = zoomWant; zoomWant = null;
+        await c.tr.applyConstraints({ advanced: [{ zoom: v }] });
+        if (z != null) showToast((c.tr.getSettings().zoom || v).toFixed(1) + '×');
+      }
+    } catch (_) { zoomWant = null; }
+    zoomBusy = false;
+  }
+  const zbox = $('localBox'), zpts = new Map();
+  let pinch = null;
+  const zdist = () => { const [a, b] = [...zpts.values()]; return Math.hypot(a.x - b.x, a.y - b.y) || 1; };
+  zbox.addEventListener('pointerdown', e => {
+    zpts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const c = swapped && zpts.size === 2 && zoomCaps();
+    pinch = c ? { d: zdist(), z: curZoom(c) } : null;
+  });
+  zbox.addEventListener('pointermove', e => {
+    if (!zpts.has(e.pointerId)) return;
+    zpts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && zpts.size === 2) setZoom(pinch.z * zdist() / pinch.d);
+  });
+  const zend = e => { zpts.delete(e.pointerId); if (zpts.size < 2) pinch = null; };
+  zbox.addEventListener('pointerup', zend);
+  zbox.addEventListener('pointercancel', zend);
+  zbox.addEventListener('wheel', e => {
+    const c = swapped && zoomCaps();
+    if (!c) return;
+    e.preventDefault();
+    setZoom(curZoom(c) * (e.deltaY < 0 ? 1.1 : 1 / 1.1));
+  }, { passive: false });
+
   $('localBox').addEventListener('click', e => {
     if (swapped || !startedAt || $('localBox')._dragged || e.target.closest('button, .rz')) return;
     setSwap(true);
