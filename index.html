@@ -26,6 +26,10 @@
   body { background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   button, input { font: inherit; color: inherit; }
   .lobby { min-height: 100%; display: grid; grid-template-rows: 1fr auto; place-items: center; padding: 24px; position: relative; }
+  #roomPw { width: 100%; }
+  #roomPw + .hint { margin: 6px 0 16px; }
+  .invcard .err { color: #ff9b8a; margin: 8px 0 0; min-height: 1.2em; font-size: .9rem; }
+  .invcard #invitePw { margin: 10px 0 0; }
   .btn.ghost { margin-top: 14px; background: transparent; color: var(--ink); border: 1px solid var(--line); }
   .hint { margin: 14px 0 0; color: var(--muted); font-size: .88rem; }
   .foot { margin-top: 24px; font-size: .85rem; color: var(--muted); text-align: center; }
@@ -193,6 +197,8 @@
   <div class="card">
     <h1>P2P11</h1>
     <p class="sub" data-i18n="sub"></p>
+    <input id="roomPw" type="password" autocomplete="new-password" maxlength="64" data-i18n-ph="pwPh" data-i18n-aria="pwPh">
+    <p class="hint" data-i18n="pwHint"></p>
     <button class="btn" id="create" data-i18n="create"></button>
     <div class="or" data-i18n="or"></div>
     <div class="row">
@@ -216,9 +222,21 @@
       <h2 id="inviteTitle" data-i18n="inviteTitle"></h2>
       <p data-i18n="inviteSub"></p>
       <input id="inviteLink" readonly data-i18n-aria="inviteLinkLbl">
+      <p id="invitePw" hidden data-i18n="invitePw"></p>
       <div class="invrow">
         <button class="invbtn primary" id="inviteShare" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span data-i18n="inviteShare"></span></button>
         <button class="invbtn" id="inviteCopy" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span data-i18n="inviteCopy"></span></button>
+      </div>
+    </div>
+  </div>
+  <div class="invite" id="pwDialog" hidden>
+    <div class="invcard" role="alertdialog" aria-labelledby="pwTitle">
+      <h2 id="pwTitle" data-i18n="pwTitle"></h2>
+      <input id="pwInput" type="password" autocomplete="off" maxlength="64" data-i18n-ph="pwEnter" data-i18n-aria="pwEnter">
+      <p class="err" id="pwErr" role="alert"></p>
+      <div class="invrow">
+        <button class="invbtn primary" id="pwOk" type="button" data-i18n="join"></button>
+        <button class="invbtn" id="pwCancel" type="button" data-i18n="pwCancel"></button>
       </div>
     </div>
   </div>
@@ -322,6 +340,12 @@
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
       more: 'Thêm', sharingNow: 'đang chia sẻ màn hình',
+      pwPh: 'Mật khẩu phòng (tùy chọn)', pwHint: 'Đặt mật khẩu để chỉ người biết mật khẩu mới vào được. Mật khẩu không nằm trong link.',
+      invitePw: 'Phòng có mật khẩu. Hãy gửi mật khẩu riêng cho họ, không kèm trong link.',
+      pwTitle: 'Phòng này có mật khẩu', pwEnter: 'Nhập mật khẩu', pwCancel: 'Hủy', pwWrong: 'Sai mật khẩu. Hãy thử lại.',
+      pwWaiting: 'Đang chờ bạn nhập mật khẩu…', pwLocked: 'Nhập sai quá nhiều lần. Hãy thử lại sau.',
+      pwFake: 'Không xác minh được phòng này nên đã ngắt kết nối.', pwUnexpected: 'Phòng này không có mật khẩu như bạn đã nhập, nên đã ngắt kết nối để an toàn.',
+      pwNoCrypto: 'Trình duyệt không hỗ trợ mật khẩu phòng (cần HTTPS).', gateClosed: 'Kết nối tới phòng đã đóng.',
       dragHint: 'Video của bạn. Kéo để di chuyển, kéo góc trên bên trái để đổi kích thước, hoặc dùng phím mũi tên và +/-. Nhấp đúp để đặt lại.', dragHintYt: 'Khung nghe chung. Kéo thanh tiêu đề để di chuyển, kéo góc dưới bên phải để đổi kích thước, hoặc dùng phím mũi tên và +/-. Nhấp đúp để đặt lại.',
       torchOn: 'Bật đèn flash', torchOff: 'Tắt đèn flash', torchFail: 'Không bật được đèn flash.',
       ytTitle: 'Nghe chung YouTube', ytHint: 'Dán link YouTube. Hai bên cùng xem và nghe đồng bộ, âm thanh không đi qua cuộc gọi.', ytPh: 'Dán link YouTube', ytGo: 'Phát chung',
@@ -362,6 +386,12 @@
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
       more: 'More', sharingNow: 'sharing your screen',
+      pwPh: 'Room password (optional)', pwHint: 'Set a password so only people who know it can join. The password is not in the link.',
+      invitePw: 'This room has a password. Send it to them separately, not in the link.',
+      pwTitle: 'This room has a password', pwEnter: 'Enter the password', pwCancel: 'Cancel', pwWrong: 'Wrong password. Please try again.',
+      pwWaiting: 'Waiting for you to enter the password…', pwLocked: 'Too many wrong attempts. Please try again later.',
+      pwFake: 'This room could not be verified, so you were disconnected.', pwUnexpected: 'This room has no password, unlike the one you entered, so you were disconnected for safety.',
+      pwNoCrypto: 'This browser cannot do room passwords (HTTPS is required).', gateClosed: 'The connection to the room was closed.',
       dragHint: 'Your video. Drag to move it, drag the top-left corner to resize it, or use the arrow keys and +/-. Double-click to reset.', dragHintYt: 'Watch together window. Drag the title bar to move it, drag the bottom-right corner to resize it, or use the arrow keys and +/-. Double-click to reset.',
       torchOn: 'Turn flashlight on', torchOff: 'Turn flashlight off', torchFail: 'Could not turn the flashlight on.',
       ytTitle: 'Watch together', ytHint: 'Paste a YouTube link. You both watch in sync, and the sound does not go through the call.', ytPh: 'Paste a YouTube link', ytGo: 'Play together',
@@ -482,6 +512,9 @@
   let startedAt = null, timerId = null, audioCtx = null, soundOn = true;
   let sharing = false, sharingStream = null, remoteShare = false, gateConn = null;
   let isHost = false, hostReady = false; // the invite card is only for the room's host, while waiting
+  let myPassword = '', roomKeyP = Promise.resolve(null), guestAuth = null, authNonce = '', gateDone = false; // room password
+  let failCount = 0, lockUntil = 0, lockLevel = 0;
+  const pending = new Map(); // host: connections that have not yet proved they know the password
 
   const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
   const makeCode = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), n => alphabet[n % alphabet.length]).join('');
@@ -491,6 +524,8 @@
     room = clean(code);
     if (!room) return showErr('needCode');
     showErr(null);
+    myPassword = $('roomPw').value.slice(0, 64);
+    if (myPassword && !(window.crypto && crypto.subtle)) return showErr('pwNoCrypto');
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: { echoCancellation: true, noiseSuppression: true } });
     } catch (e) {
@@ -512,29 +547,36 @@
 
   // The first person into a room keeps its ID. Anyone else first asks permission over a data
   // channel: the host lets exactly one guest in and answers "full" to everyone after that.
+  // With a room password the guest must also pass a challenge first (see "Room password" below).
   function startAsHost() {
     isHost = true;
     setStatus('creating');
-    peer = new Peer(PREFIX + room, {
-      config: {
-        iceTransportPolicy: 'all',
-        iceCandidatePoolSize: 10,
-        iceServers: PEER_OPTS.config.iceServers
-      }
-    });
+    // Key derived from the password: null = no password, false = failed (nobody is let in).
+    roomKeyP = myPassword
+      ? deriveKey(myPassword, room).catch(() => { setStatus('pwNoCrypto'); try { peer.destroy(); } catch (_) {} return false; })
+      : Promise.resolve(null);
+    peer = new Peer(PREFIX + room, PEER_OPTS);
     peer.on('open', () => { hostReady = true; setStatus('waiting'); updateInvite(); });
     peer.on('connection', conn => {
-      conn.on('data', d => { if (conn === guestConn) onCtl(d); });
-      conn.on('open', () => {
-        if (guestId && guestId !== conn.peer) {
-          conn.send({ type: 'full' });
-          setTimeout(() => conn.close(), 1000);
-          return;
-        }
-        guestId = conn.peer; guestConn = conn;
-        conn.send({ type: 'welcome' });
+      conn.on('data', d => {
+        if (conn === guestConn) onCtl(d);
+        else if (d && d.type === 'proof') handleProof(conn, d);
+      });
+      conn.on('open', async () => {
+        const key = await roomKeyP;
+        if (key === false) return;
+        // Checked after the await, and acted on straight away, so two joiners at the same moment cannot both get in.
+        if (guestId && guestId !== conn.peer) { refuse(conn, 'full'); return; }
+        if (key === null) { admit(conn); return; }
+        if (Date.now() < lockUntil) { refuse(conn, 'denied', { reason: 'locked' }); return; }
+        if (pending.size >= 4) { refuse(conn, 'full'); return; }
+        const nonce = randomB64(16);
+        const timer = setTimeout(() => { try { conn.close(); } catch (_) {} }, 90000); // do not wait for ever
+        pending.set(conn, { nonce, tries: 0, timer });
+        conn.send({ type: 'auth', nonce });
       });
       conn.on('close', () => {
+        clearPending(conn);
         if (guestConn === conn) { guestId = null; guestConn = null; }
       });
     });
@@ -551,18 +593,14 @@
   }
 
   function startAsGuest() {
-    isHost = false; hostReady = false;
+    isHost = false; hostReady = false; guestAuth = null; gateDone = false;
     setStatus('connecting');
     peer = new Peer(PEER_OPTS);
     peer.on('open', () => {
       const conn = peer.connect(PREFIX + room, { reliable: true });
       gateConn = conn;
-      conn.on('data', d => {
-        if (!d) return;
-        if (d.type === 'welcome' && !call) bind(peer.call(PREFIX + room, stream));
-        else if (d.type === 'full') { setStatus('full'); try { peer.destroy(); } catch (_) {} }
-        else onCtl(d);
-      });
+      conn.on('data', d => onGate(conn, d));
+      conn.on('close', () => { if (!call && !gateDone) { hidePwDialog(); setStatus('gateClosed'); } });
     });
     peer.on('error', err => fail(err));
   }
@@ -1151,6 +1189,7 @@
     const show = isHost && hostReady && !startedAt;
     $('invite').hidden = !show;
     if (show) $('inviteLink').value = location.href;
+    $('invitePw').hidden = !myPassword;
   }
   $('inviteLink').addEventListener('focus', e => e.target.select());
   // Share sheet with just the URL. Without the Web Share API (e.g. Firefox on desktop) only Copy is shown.
@@ -1656,6 +1695,120 @@
   window.addEventListener('resize', () => draggables.forEach(f => f()));
   document.addEventListener('fullscreenchange', () => draggables.forEach(f => f()));
   document.addEventListener('webkitfullscreenchange', () => draggables.forEach(f => f()));
+
+  // ---------- Room password ----------
+  // The password itself is never sent. The host gives the guest a random challenge (nonce), the guest answers
+  // with an HMAC of it computed with a key stretched from the password (PBKDF2), and the host answers with a
+  // second HMAC so the guest knows the room is the real one. Everything in this block runs in the browser.
+  const enc = new TextEncoder();
+  const B64 = /^[A-Za-z0-9+/=]{1,200}$/;
+  const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+  const unb64 = str => Uint8Array.from(atob(str), ch => ch.charCodeAt(0));
+  const randomB64 = n => b64(crypto.getRandomValues(new Uint8Array(n)));
+  const hmac = (key, text) => crypto.subtle.sign('HMAC', key, enc.encode(text));
+
+  async function deriveKey(password, roomCode) {
+    const base = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt: enc.encode('p2p11|' + roomCode), iterations: 150000, hash: 'SHA-256' },
+      base, { name: 'HMAC', hash: 'SHA-256', length: 256 }, false, ['sign', 'verify']);
+  }
+
+  // ----- host side -----
+  function clearPending(conn) {
+    const p = pending.get(conn);
+    if (p) { clearTimeout(p.timer); pending.delete(conn); }
+  }
+  function refuse(conn, type, extra) {
+    try { conn.send({ type, ...extra }); } catch (_) {}
+    clearPending(conn);
+    setTimeout(() => { try { conn.close(); } catch (_) {} }, 600);
+  }
+  function admit(conn, hp) {
+    guestId = conn.peer; guestConn = conn;
+    conn.send(hp ? { type: 'welcome', hp } : { type: 'welcome' });
+  }
+  async function handleProof(conn, d) {
+    const p = pending.get(conn);
+    const key = await roomKeyP;
+    if (!p || !key) return;
+    if (Date.now() < lockUntil) { refuse(conn, 'denied', { reason: 'locked' }); return; }
+    let ok = false;
+    if (typeof d.cn === 'string' && typeof d.proof === 'string' && B64.test(d.cn) && B64.test(d.proof)) {
+      try { ok = await crypto.subtle.verify('HMAC', key, unb64(d.proof), enc.encode('c|' + p.nonce + '|' + d.cn)); } catch (_) {}
+    }
+    if (!pending.has(conn)) return; // the connection went away while we were checking
+    if (ok) {
+      clearPending(conn);
+      failCount = 0; lockLevel = 0;
+      if (guestId && guestId !== conn.peer) { refuse(conn, 'full'); return; }
+      admit(conn, b64(await hmac(key, 'h|' + p.nonce + '|' + d.cn)));
+      return;
+    }
+    // Wrong password: 3 tries per connection, and 5 failures in total lock the room for 30 s, doubling each time (max 10 min).
+    p.tries++; failCount++;
+    if (failCount >= 5) { lockLevel++; lockUntil = Date.now() + Math.min(600000, 30000 * 2 ** (lockLevel - 1)); failCount = 0; }
+    if (p.tries >= 3 || Date.now() < lockUntil) { refuse(conn, 'denied', { reason: 'locked' }); return; }
+    p.nonce = randomB64(16); // a new challenge for every attempt, so an old answer is useless
+    conn.send({ type: 'denied', reason: 'password', nonce: p.nonce });
+  }
+
+  // ----- guest side -----
+  function hidePwDialog() { $('pwDialog').hidden = true; }
+  function showPwDialog(errKey) {
+    myPassword = ''; // what was typed (if anything) did not work
+    $('pwErr').textContent = errKey ? t(errKey) : '';
+    $('pwInput').value = '';
+    $('pwDialog').hidden = false;
+    setStatus('pwWaiting');
+    setTimeout(() => $('pwInput').focus(), 0);
+    announce(t('pwTitle'));
+  }
+  async function sendProof(conn, password) {
+    try {
+      const key = await deriveKey(password, room);
+      const cn = randomB64(16);
+      const proof = b64(await hmac(key, 'c|' + authNonce + '|' + cn));
+      guestAuth = { key, cn, nonce: authNonce };
+      conn.send({ type: 'proof', cn, proof });
+      setStatus('connecting');
+    } catch (_) { setStatus('pwNoCrypto'); }
+  }
+  async function onGate(conn, d) {
+    if (!d) return;
+    if (d.type === 'auth' || (d.type === 'denied' && d.reason === 'password')) {
+      if (typeof d.nonce !== 'string' || !B64.test(d.nonce)) return;
+      authNonce = d.nonce;
+      if (d.type === 'auth' && myPassword) await sendProof(conn, myPassword);
+      else showPwDialog(d.type === 'denied' ? 'pwWrong' : null);
+    } else if (d.type === 'denied') { // locked out
+      gateDone = true; hidePwDialog(); setStatus('pwLocked');
+      try { peer.destroy(); } catch (_) {}
+    } else if (d.type === 'welcome' && !call) {
+      if (guestAuth) { // the host must prove it knows the password too
+        let ok = false;
+        try { ok = typeof d.hp === 'string' && B64.test(d.hp) && await crypto.subtle.verify('HMAC', guestAuth.key, unb64(d.hp), enc.encode('h|' + guestAuth.nonce + '|' + guestAuth.cn)); } catch (_) {}
+        if (!ok) { gateDone = true; setStatus('pwFake'); try { peer.destroy(); } catch (_) {} return; }
+      } else if (myPassword) { // you typed a password, so you expect a protected room, but this one is open
+        gateDone = true; setStatus('pwUnexpected'); try { peer.destroy(); } catch (_) {}
+        return;
+      }
+      gateDone = true; hidePwDialog();
+      bind(peer.call(PREFIX + room, stream));
+    } else if (d.type === 'full') {
+      gateDone = true; setStatus('full');
+      try { peer.destroy(); } catch (_) {}
+    } else onCtl(d);
+  }
+  async function submitPw() {
+    const pw = $('pwInput').value;
+    if (!pw || !gateConn) return;
+    hidePwDialog();
+    await sendProof(gateConn, pw);
+  }
+  $('pwOk').onclick = submitPw;
+  $('pwInput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); submitPw(); } });
+  $('pwCancel').onclick = leave;
 
   // ---------- Call timer and join/leave sounds ----------
   try { soundOn = localStorage.getItem('sound') !== '0'; } catch (_) {}

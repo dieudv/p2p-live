@@ -8,6 +8,7 @@ A 1-to-1 video calling app that runs entirely in the browser and connects peers 
 
 - Direct 1-to-1 video and audio calls between two browsers
 - One-click room creation, shared via link or room code
+- Optional room password: only people who know it can join, even if they have the link. The password is never sent over the network and is not part of the link
 - Mute/unmute mic, turn camera on/off, hang up
 - Switch camera, microphone and speaker during a call, even while connected
 - Outgoing video quality: Auto, High (720p), Medium (480p), Low (360p) or Data saver (240p), chosen in the Devices panel; it caps the resolution, bitrate and frame rate you send, and the Info panel shows the effect
@@ -84,8 +85,9 @@ Note: TURN credentials placed in a static file are publicly visible. For a serio
 
 ## Security and privacy
 
-- Anyone with the link or room code can join the room. The room code is the only secret, so share it over a private channel.
-- Each room admits only one guest. The host rejects a third person, who sees a "room is full" message. Anyone who enters before the intended guest can still get in with the room code, so keep the code private.
+- Without a password, anyone with the link or room code can join the room, so share it over a private channel. With a room password, the link alone is not enough.
+- Room password: the host sends the joiner a random challenge, the joiner answers with a keyed hash (HMAC-SHA-256) made from the password stretched with PBKDF2 (150,000 rounds), and the host then proves it knows the password too, so a fake room cannot pass for the real one. Each joiner gets 3 tries per connection and 5 failures in total lock the room for 30 seconds, doubling each time up to 10 minutes. Choose a password that is hard to guess, because a short one can still be guessed by trying; send it separately from the link. It needs HTTPS (the Web Crypto API).
+- Each room admits only one guest. The host rejects a third person, who sees a "room is full" message. Without a password, anyone who enters before the intended guest can still get in with the room code; a room password prevents that.
 - The public PeerJS signaling server can see both parties' IP addresses and connection details, but not the video or audio.
 - The two participants can learn each other's IP address. This is inherent to P2P unless TURN is used.
 
@@ -93,12 +95,11 @@ Note: TURN credentials placed in a static file are publicly visible. For a serio
 
 - Only 2 participants per room
 - Depends on PeerJS's free public signaling server, with no uptime guarantee
-- No room password yet
 - Internet access is required to load the page and exchange signaling, even though the video itself may travel over the LAN
 
 ## Roadmap
 
-- Longer room codes and optional room passwords
+- Longer room codes
 - Self-hosted signaling with Cloudflare Durable Objects (WebSocket)
 
 ## Checking which path a call uses
