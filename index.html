@@ -178,17 +178,6 @@
   .ytfoot { position: relative; height: 18px; }
   .rz-br { right: 0; bottom: 0; width: 28px; height: 18px; }
   .rz-br svg { right: 4px; bottom: 1px; opacity: .8; }
-  .netdlg { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(0,0,0,.55); }
-  .netdlg[hidden] { display: none; }
-  .netcard { width: min(480px, 100%); max-height: 92vh; overflow: auto; padding: 22px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 14px; }
-  .netcard h2 { margin: 0 0 6px; font-size: 1.15rem; }
-  .netcard p { margin: 0 0 14px; color: var(--muted); font-size: .92rem; }
-  #netOut dl { margin: 0 0 14px; display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: .92rem; }
-  #netOut dt { color: var(--muted); }
-  #netOut dd { margin: 0; text-align: right; }
-  #netOut .verdict { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); font-size: .95rem; }
-  .netrow { display: flex; gap: 10px; }
-  .netrow .btn { flex: 1; margin-top: 0; }
   .more-wrap { position: relative; }
   .menu { display: none; position: absolute; right: 0; bottom: calc(100% + 10px); z-index: 6; width: min(250px, 90vw); padding: 6px; flex-direction: column; gap: 2px; background: rgba(16,26,34,.96); border: 1px solid rgba(255,255,255,.18); border-radius: 12px; }
   .menu.on { display: flex; }
@@ -217,7 +206,6 @@
       <button class="btn" id="join" data-i18n="join"></button>
     </div>
     <p class="err" id="err" role="alert"></p>
-    <button class="btn ghost" id="netBtn" type="button" data-i18n="netTest"></button>
     <button class="btn ghost" id="installBtn" hidden data-i18n="install"></button>
     <p class="hint" id="iosHint" hidden data-i18n="iosHint"></p>
   </div>
@@ -331,25 +319,12 @@
         <button class="ctl" id="pipBtn" aria-pressed="false" disabled></button>
         <button class="ctl" id="fsBtn" aria-pressed="false"></button>
         <button class="ctl" id="devBtn" aria-expanded="false" aria-controls="devPanel"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="9" cy="7" r="2.2"/><circle cx="15" cy="17" r="2.2"/></svg><span data-i18n="devices"></span></button>
-        <button class="ctl" id="netBtn2" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.55a11 11 0 0 1 14 0"/><path d="M8.5 16a6 6 0 0 1 7 0"/><path d="M12 20h.01"/><path d="M1.5 9a16 16 0 0 1 21 0"/></svg><span data-i18n="netTest"></span></button>
         <button class="ctl" id="infoBtn" aria-expanded="false" aria-controls="infoPanel"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><path d="M12 8h.01"/></svg><span data-i18n="info"></span></button>
       </div>
     </div>
     <button class="ctl hang" id="hang" data-i18n-label="hang"><svg viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(135deg)"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
   </div>
 </section>
-
-<div class="netdlg" id="netDlg" hidden>
-  <div class="netcard" role="dialog" aria-labelledby="netTitle">
-    <h2 id="netTitle" data-i18n="netTest"></h2>
-    <p data-i18n="netHint"></p>
-    <div id="netOut" role="status" aria-live="polite"></div>
-    <div class="netrow">
-      <button class="btn" id="netRun" type="button" data-i18n="netRun"></button>
-      <button class="btn ghost" id="netClose" type="button" data-i18n="close"></button>
-    </div>
-  </div>
-</div>
 
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
@@ -365,17 +340,6 @@
       micOn: 'Tắt mic', micOff: 'Bật mic', camOn: 'Tắt camera', camOff: 'Bật camera', hang: 'Kết thúc',
       switchTo: 'English',
       more: 'Thêm', sharingNow: 'đang chia sẻ màn hình',
-      netTest: 'Kiểm tra kết nối mạng', netHint: 'Chạy trên thiết bị đang gặp lỗi. Mất khoảng 10 giây và chỉ kiểm tra mạng của máy này.',
-      netRun: 'Bắt đầu kiểm tra', netRunning: 'Đang kiểm tra…', close: 'Đóng',
-      netStun: 'Máy chủ STUN', netNat: 'Loại NAT', netIpv6: 'IPv6', netRelayUdp: 'Relay (UDP)', netRelayTcp: 'Relay (TCP)',
-      netOk: '✓ Được', netNo: '✗ Không', netBlocked: '✗ Không truy cập được', netYes: '✓ Có', netOff: 'Đã tắt trong cấu hình',
-      netCone: '✓ Thông thường (nối trực tiếp được)', netSym: '⚠ Đối xứng (khó nối trực tiếp)', netUnknown: 'Không xác định',
-      netV1: 'Mạng này chặn cả STUN lẫn relay, nên cuộc gọi sẽ không nối được. Hãy thử mạng khác.',
-      netV2: 'Mạng này không nối trực tiếp được nhưng relay dùng được, nên cuộc gọi sẽ đi qua relay.',
-      netV3: 'Mạng này không nối trực tiếp được và relay cũng không dùng được, nên cuộc gọi sẽ thất bại với hầu hết các mạng khác.',
-      netV4: 'Mạng tốt: nối trực tiếp được và có relay dự phòng.',
-      netV5: 'Nối trực tiếp được nếu bên kia cũng không ở sau NAT đối xứng. Relay dự phòng không dùng được.',
-      netV6: 'Nối trực tiếp được nếu bên kia cũng không ở sau NAT đối xứng. Relay đã bị tắt trong cấu hình.',
       webrtc: 'Không thiết lập được đường truyền giữa hai mạng. Hãy thử lại hoặc đổi mạng.',
       connectSlow: 'Chưa kết nối được sau 20 giây. Mạng của một trong hai bên có thể chặn kết nối trực tiếp. Thử Wi-Fi khác hoặc tắt VPN.',
       pwPh: 'Mật khẩu phòng (tùy chọn)', pwHint: 'Đặt mật khẩu để chỉ người biết mật khẩu mới vào được. Mật khẩu không nằm trong link.',
@@ -424,17 +388,6 @@
       micOn: 'Mute', micOff: 'Unmute', camOn: 'Camera off', camOff: 'Camera on', hang: 'Hang up',
       switchTo: 'Tiếng Việt',
       more: 'More', sharingNow: 'sharing your screen',
-      netTest: 'Test network connection', netHint: 'Run this on the device that has trouble. It takes about 10 seconds and only tests this device\'s network.',
-      netRun: 'Run test', netRunning: 'Testing…', close: 'Close',
-      netStun: 'STUN servers', netNat: 'NAT type', netIpv6: 'IPv6', netRelayUdp: 'Relay (UDP)', netRelayTcp: 'Relay (TCP)',
-      netOk: '✓ Reachable', netNo: '✗ No', netBlocked: '✗ Unreachable', netYes: '✓ Yes', netOff: 'Disabled in the settings',
-      netCone: '✓ Ordinary (direct connection possible)', netSym: '⚠ Symmetric (direct connection unlikely)', netUnknown: 'Unknown',
-      netV1: 'This network blocks both STUN and the relay, so calls will not connect. Try another network.',
-      netV2: 'This network cannot connect directly but the relay works, so calls will go through the relay.',
-      netV3: 'This network cannot connect directly and the relay does not work either, so calls will fail with most other networks.',
-      netV4: 'Good network: direct connections work, and the relay is available as a backup.',
-      netV5: 'Direct connections work if the other side is not behind a symmetric NAT either. The backup relay is not reachable.',
-      netV6: 'Direct connections work if the other side is not behind a symmetric NAT either. The relay is disabled in the settings.',
       webrtc: 'Could not set up a connection between the two networks. Try again or switch network.',
       connectSlow: 'Still not connected after 20 seconds. One of the two networks may block direct connections. Try another Wi-Fi or turn off any VPN.',
       pwPh: 'Room password (optional)', pwHint: 'Set a password so only people who know it can join. The password is not in the link.',
@@ -557,12 +510,14 @@
   const ICE_SERVERS = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun.cloudflare.com:3478' }
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: 'stun:global.stun.twilio.com:3478' }
   ];
-  const RELAY_AUTH = { username: 'peerjs', credential: 'peerjsp' };
-  const RELAY_UDP = ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'];
-  const RELAY_TCP = RELAY_UDP.map(u => u + '?transport=tcp'); // for networks that block UDP
-  if (USE_RELAY) ICE_SERVERS.push({ urls: [...RELAY_UDP, ...RELAY_TCP], ...RELAY_AUTH });
+  if (USE_RELAY) {
+    ICE_SERVERS.push({ urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' });
+  }
   const PEER_OPTS = { config: { iceServers: ICE_SERVERS, iceCandidatePoolSize: 2, sdpSemantics: 'unified-plan' } };
 
   let stream, peer, call, room;
@@ -1872,92 +1827,6 @@
   $('pwOk').onclick = submitPw;
   $('pwInput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); submitPw(); } });
   $('pwCancel').onclick = leave;
-
-  // ---------- Network test ----------
-  // Gathers ICE candidates the same way a call does and reports what this device's network allows.
-  // Everything happens in the browser; the only traffic is to the public STUN/relay servers already used by calls.
-  function parseCandidate(line) {
-    const m = /candidate:\S+ \d+ (\w+) \d+ (\S+) (\d+) typ (\w+)(?: raddr (\S+) rport (\d+))?/.exec(line);
-    return m && { proto: m[1].toLowerCase(), addr: m[2], port: +m[3], type: m[4], raddr: m[5], rport: m[6] };
-  }
-  function gatherCandidates(iceServers, extra, ms) {
-    return new Promise(resolve => {
-      const found = [];
-      let done = false, pc, timer;
-      const finish = () => {
-        if (done) return;
-        done = true; clearTimeout(timer);
-        try { pc.close(); } catch (_) {}
-        resolve(found);
-      };
-      try { pc = new RTCPeerConnection({ iceServers, ...extra }); } catch (_) { resolve(found); return; }
-      timer = setTimeout(finish, ms);
-      pc.onicecandidate = e => {
-        if (!e.candidate) { finish(); return; } // null candidate = gathering is over
-        const c = parseCandidate(e.candidate.candidate);
-        if (c) found.push(c);
-      };
-      pc.createDataChannel('t');
-      pc.createOffer().then(o => pc.setLocalDescription(o)).catch(finish);
-    });
-  }
-
-  let netRunning = false;
-  async function runNetTest() {
-    if (netRunning) return;
-    netRunning = true;
-    $('netRun').disabled = true;
-    $('netRun').textContent = t('netRunning');
-    $('netOut').textContent = '';
-    const relayOn = USE_RELAY;
-    const [stun, udp, tcp] = await Promise.all([
-      gatherCandidates([{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }], {}, 6000),
-      relayOn ? gatherCandidates([{ urls: RELAY_UDP, ...RELAY_AUTH }], { iceTransportPolicy: 'relay' }, 9000) : [],
-      relayOn ? gatherCandidates([{ urls: RELAY_TCP, ...RELAY_AUTH }], { iceTransportPolicy: 'relay' }, 9000) : []
-    ]);
-    // Two STUN servers contacted from the same local port: different public ports mean a symmetric NAT.
-    const srflx = stun.filter(c => c.type === 'srflx');
-    const mappings = new Set(srflx.map(c => c.addr + ':' + c.port));
-    const stunOk = srflx.length > 0;
-    const symmetric = stunOk && mappings.size > 1;
-    const ipv6 = stun.some(c => c.type === 'host' && c.addr.includes(':') && !/^fe80/i.test(c.addr));
-    const relayUdp = udp.some(c => c.type === 'relay');
-    const relayTcp = tcp.some(c => c.type === 'relay');
-    const relayOk = relayUdp || relayTcp;
-    const direct = stunOk && !symmetric;
-
-    const rows = [
-      ['netStun', t(stunOk ? 'netOk' : 'netBlocked')],
-      ['netNat', t(!stunOk ? 'netUnknown' : symmetric ? 'netSym' : 'netCone')],
-      ['netIpv6', t(ipv6 ? 'netYes' : 'netNo')],
-      ['netRelayUdp', relayOn ? t(relayUdp ? 'netOk' : 'netBlocked') : t('netOff')],
-      ['netRelayTcp', relayOn ? t(relayTcp ? 'netOk' : 'netBlocked') : t('netOff')]
-    ];
-    const dl = document.createElement('dl');
-    rows.forEach(([k, v]) => {
-      const dt = document.createElement('dt'); dt.textContent = t(k);
-      const dd = document.createElement('dd'); dd.textContent = v;
-      dl.append(dt, dd);
-    });
-    let verdict;
-    if (!relayOn) verdict = direct ? 'netV6' : 'netV3';
-    else if (direct) verdict = relayOk ? 'netV4' : 'netV5';
-    else verdict = relayOk ? 'netV2' : (stunOk ? 'netV3' : 'netV1');
-    const v = document.createElement('p');
-    v.className = 'verdict';
-    v.textContent = t(verdict);
-    $('netOut').append(dl, v);
-    $('netRun').disabled = false;
-    $('netRun').textContent = t('netRun');
-    netRunning = false;
-  }
-  function openNetTest() { $('netOut').textContent = ''; $('netDlg').hidden = false; $('netRun').focus(); }
-  function closeNetTest() { $('netDlg').hidden = true; }
-  $('netBtn').onclick = openNetTest;
-  $('netBtn2').onclick = () => { togglePanel(null); openNetTest(); };
-  $('netRun').onclick = runNetTest;
-  $('netClose').onclick = closeNetTest;
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('netDlg').hidden) closeNetTest(); });
 
   // ---------- Call timer and join/leave sounds ----------
   try { soundOn = localStorage.getItem('sound') !== '0'; } catch (_) {}
