@@ -629,7 +629,7 @@
     peer.on('call', c => {
       // Only the admitted guest may call, and only once.
       if (c.peer !== guestId || (call && call.open)) { c.close(); return; }
-      c.answer(stream);
+      c.answer(outStream());
       bind(c);
     });
     peer.on('error', err => {
@@ -681,13 +681,67 @@
     location.reload();
   }
 
+  let camMemo = {}, camBusy = false, blackTrack = null;
+  const camIsOff = () => $('cam').getAttribute('aria-pressed') === 'true';
+  // Black placeholder video, so the sender keeps a track while the camera hardware is released.
+  function getBlack() {
+    if (!blackTrack || blackTrack.readyState === 'ended') {
+      const c = document.createElement('canvas');
+      c.width = 640; c.height = 360;
+      c.getContext('2d').fillRect(0, 0, 640, 360);
+      blackTrack = c.captureStream(5).getVideoTracks()[0];
+    }
+    return blackTrack;
+  }
+  // Stream handed to PeerJS: never without a video track, so the camera can be turned on later.
+  const outStream = () => stream.getVideoTracks().length ? stream : new MediaStream([...stream.getAudioTracks(), getBlack()]);
+
+  async function setCamera(on) {
+    const pc = call && call.peerConnection;
+    const sender = pc && pc.getSenders().find(x => x.track && x.track.kind === 'video');
+    if (!on) {
+      const old = stream.getVideoTracks()[0];
+      if (old) {
+        const s = old.getSettings();
+        camMemo = { deviceId: s.deviceId, facing: s.facingMode };
+        await setTorch(false);
+        old.stop(); // releases the camera, the LED goes off
+        stream.removeTrack(old);
+      }
+      if (sender && !sharing) { try { await sender.replaceTrack(getBlack()); } catch (_) {} }
+      updateRear();
+      return true;
+    }
+    const tries = [];
+    if (camMemo.deviceId) tries.push({ deviceId: { exact: camMemo.deviceId } });
+    if (camMemo.facing === 'user' || camMemo.facing === 'environment') tries.push({ facingMode: { ideal: camMemo.facing } });
+    tries.push({});
+    let ns = null;
+    for (const c of tries) {
+      try { ns = await navigator.mediaDevices.getUserMedia({ video: { ...c, width: 1280, height: 720 } }); break; } catch (_) {}
+    }
+    if (!ns) { showToast(t('noMedia')); return false; }
+    const nt = ns.getVideoTracks()[0];
+    stream.addTrack(nt);
+    updateRear();
+    if (sender && !sharing) { try { await sender.replaceTrack(nt); } catch (_) {} }
+    applyQuality();
+    if (!sharing) { $('local').srcObject = null; $('local').srcObject = stream; }
+    loadDevices();
+    return true;
+  }
+
   function toggle(btn, kind) {
-    btn.addEventListener('click', () => {
-      const tracks = kind === 'audio' ? stream.getAudioTracks() : stream.getVideoTracks();
+    btn.addEventListener('click', async () => {
       const off = btn.getAttribute('aria-pressed') !== 'true';
-      tracks.forEach(tr => tr.enabled = !off);
+      if (kind === 'video') {
+        if (camBusy) return;
+        camBusy = true;
+        const ok = await setCamera(!off);
+        camBusy = false;
+        if (!ok) return;
+      } else stream.getAudioTracks().forEach(tr => tr.enabled = !off);
       btn.setAttribute('aria-pressed', off);
-      if (off && kind === 'video') setTorch(false); // the light is pointless (and drains the battery) with the camera off
       render();
     });
   }
@@ -857,7 +911,7 @@
     updateTorch();
   }
   async function flipCamera() {
-    if (flipping || !stream) return;
+    if (flipping || !stream || camIsOff()) return;
     flipping = true;
     $('flipBtn').disabled = true;
     let ok = false;
@@ -973,7 +1027,10 @@
   $('infoBtn').onclick = () => togglePanel('info');
   $('verifyBtn').onclick = () => togglePanel('verify');
   document.addEventListener('keydown', e => { if (e.key === 'Escape') togglePanel(null); });
-  $('selCam').onchange = e => switchDevice('video', e.target.value);
+  $('selCam').onchange = e => {
+    if (camIsOff()) { camMemo = { deviceId: e.target.value }; return; } // takes effect when the camera is turned on
+    switchDevice('video', e.target.value);
+  };
   $('selMic').onchange = e => switchDevice('audio', e.target.value);
   const FX_IDS = { fxNs: 'noiseSuppression', fxEc: 'echoCancellation', fxAgc: 'autoGainControl' };
   async function applyMicFx() {
@@ -1213,7 +1270,7 @@
     const cam = stream && stream.getVideoTracks()[0];
     const pc = call && call.peerConnection;
     const sender = pc && pc.getSenders().find(x => x.track && x.track.kind === 'video');
-    if (sender && cam) sender.replaceTrack(cam).then(() => applyQuality()).catch(() => {});
+    if (sender) sender.replaceTrack(cam || getBlack()).then(() => applyQuality()).catch(() => {});
     unmixShareAudio(pc);
     $('local').srcObject = stream;
     $('call').classList.remove('sharing');
@@ -1863,7 +1920,7 @@
         return;
       }
       gateDone = true; hidePwDialog();
-      bind(peer.call(PREFIX + room, stream));
+      bind(peer.call(PREFIX + room, outStream()));
     } else if (d.type === 'full') {
       gateDone = true; setStatus('full');
       try { peer.destroy(); } catch (_) {}
