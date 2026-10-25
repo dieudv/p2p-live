@@ -594,6 +594,7 @@
     location.hash = room;
     loadDevices();
     inCall = true;
+    registerAutoPip();
     keepAwake();
     try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch (_) {}
     setLocalMeter();
@@ -1077,7 +1078,7 @@
   const canFs = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || 'webkitEnterFullscreen' in HTMLVideoElement.prototype);
   const canDocPip = 'documentPictureInPicture' in window;
   const canPip = canDocPip || !!(document.pictureInPictureEnabled && !remoteEl.disablePictureInPicture);
-  let pipWin = null, pipLocal = null;
+  let pipWin = null, pipLocal = null, autoPip = false;
   if (!canFs) $('fsBtn').style.display = 'none';
   if (!canPip) $('pipBtn').style.display = 'none';
 
@@ -1142,7 +1143,7 @@
       remoteEl.removeAttribute('style');
       $('call').insertBefore(remoteEl, $('call').firstChild);
       remoteEl.play().catch(() => {});
-      pipWin = null; pipLocal = null;
+      pipWin = null; pipLocal = null; autoPip = false;
       updateViewButtons();
     });
     updateViewButtons();
@@ -1152,10 +1153,26 @@
     try {
       if (pipWin) { pipWin.close(); return; }
       if (document.pictureInPictureElement) { await document.exitPictureInPicture(); return; }
-      if (canDocPip) { try { await openDocPip(); return; } catch (_) {} } // fall back to standard PiP
+      if (canDocPip) { autoPip = false; try { await openDocPip(); return; } catch (_) {} }
       await remoteEl.requestPictureInPicture();
     } catch (_) {}
   };
+
+  // Auto Picture-in-Picture when you leave the tab during a call (Chrome/Edge desktop, like Google Meet).
+  function registerAutoPip() {
+    if (!canDocPip || !('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.setActionHandler('enterpictureinpicture', async () => {
+        if (!inCall || pipWin) return;
+        try { await openDocPip(); autoPip = true; } catch (_) {}
+      });
+    } catch (_) {} // the browser does not know this action: nothing happens
+  }
+  // Close the window again when you come back, but only if it was opened automatically.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && pipWin && autoPip) pipWin.close();
+  });
+
   ['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, updateViewButtons));
   ['loadedmetadata', 'emptied', 'enterpictureinpicture', 'leavepictureinpicture'].forEach(ev => remoteEl.addEventListener(ev, updateViewButtons));
 
