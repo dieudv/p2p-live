@@ -513,7 +513,17 @@
     { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun3.l.google.com:19302' },
     { urls: 'stun:stun.cloudflare.com:3478' },
-    { urls: 'stun:global.stun.twilio.com:3478' }
+    { urls: 'stun:global.stun.twilio.com:3478' },
+    {
+      urls: 'turn:turn.jami.net:3478?transport=udp',
+      username: 'ring',
+      credential: 'ring'
+    },
+    {
+      urls: 'turn:turn.jami.net:3478?transport=tcp',
+      username: 'ring',
+      credential: 'ring'
+    },
   ];
   if (USE_RELAY) {
     ICE_SERVERS.push({ urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' });
