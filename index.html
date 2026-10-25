@@ -1077,7 +1077,7 @@
   const canFs = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || 'webkitEnterFullscreen' in HTMLVideoElement.prototype);
   const canDocPip = 'documentPictureInPicture' in window;
   const canPip = canDocPip || !!(document.pictureInPictureEnabled && !remoteEl.disablePictureInPicture);
-  let pipWin = null;
+  let pipWin = null, pipLocal = null;
   if (!canFs) $('fsBtn').style.display = 'none';
   if (!canPip) $('pipBtn').style.display = 'none';
 
@@ -1103,8 +1103,23 @@
       else if (remoteEl.webkitEnterFullscreen) remoteEl.webkitEnterFullscreen(); // iPhone: native video player
     } catch (_) {}
   };
-  const pipMirrorStyle = () => { if (pipWin) remoteEl.style.transform = mirrorOn && !remoteShare ? 'scaleX(-1)' : 'none'; };
+  const pipMirrorStyle = () => { if (pipWin) { remoteEl.style.transform = mirrorOn && !remoteShare ? 'scaleX(-1)' : 'none'; syncPipLocal(); } };
 
+  // Keeps the small self-view in the floating window in step with the main one (source, mirror, camera off).
+  function syncPipLocal() {
+    if (!pipWin || !pipLocal) return;
+    const src = $('local').srcObject;
+    const tr = src && src.getVideoTracks()[0];
+    if (pipLocal._src !== src || pipLocal._tr !== tr) {
+      pipLocal._src = src; pipLocal._tr = tr;
+      pipLocal.srcObject = tr ? new MediaStream([tr]) : null;
+      pipLocal.play().catch(e => console.warn('pipLocal', e));
+    }
+    pipLocal.style.display = tr ? 'block' : 'none';
+    const rear = $('call').classList.contains('rear');
+    pipLocal.style.transform = mirrorOn && !sharing && !rear ? 'scaleX(-1)' : 'none';
+  }
+  setInterval(syncPipLocal, 300); // not tied to tickMeters, which pauses while the main tab is hidden
   // Moves the existing <video> into a small floating window. The browser just composites the same
   // video, so there is no extra decoding or pixel processing.
   async function openDocPip() {
@@ -1113,6 +1128,12 @@
     const win = await window.documentPictureInPicture.requestWindow({ width, height });
     pipWin = win;
     win.document.body.style.cssText = 'margin:0;background:#000;overflow:hidden;';
+    pipLocal = win.document.createElement('video');
+    pipLocal.muted = true; pipLocal.autoplay = true; pipLocal.playsInline = true;
+    pipLocal.style.cssText = 'position:fixed;z-index:10;right:8px;bottom:8px;width:96px;height:72px;object-fit:cover;background:#222;border:2px solid #fff;border-radius:8px;';
+    pipLocal.addEventListener('loadedmetadata', () => pipLocal.play().catch(e => console.warn('pipLocal', e)));
+    win.document.body.append(pipLocal);
+    syncPipLocal();
     Object.assign(remoteEl.style, { width: '100vw', height: '100vh', objectFit: 'contain' });
     pipMirrorStyle();
     win.document.body.append(remoteEl);
@@ -1121,7 +1142,7 @@
       remoteEl.removeAttribute('style');
       $('call').insertBefore(remoteEl, $('call').firstChild);
       remoteEl.play().catch(() => {});
-      pipWin = null;
+      pipWin = null; pipLocal = null;
       updateViewButtons();
     });
     updateViewButtons();
