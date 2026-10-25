@@ -188,6 +188,7 @@
   .ctl:disabled { opacity: .4; cursor: not-allowed; }
   @media (max-width: 600px) { .call { --lw: 32vw; } }
   @media (max-width: 359px) { .call { --lb: 144px; } .panel { bottom: 144px; } }
+  .panel .vcode { margin: 0 0 12px; color: #fff; font: 600 1.25rem/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .06em; text-align: center; font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -306,6 +307,11 @@
     <h2 id="infoTitle" data-i18n="infoTitle"></h2>
     <div id="infoBody"></div>
   </div>
+  <div class="panel" id="verifyPanel" role="dialog" aria-labelledby="verifyTitle">
+    <h2 id="verifyTitle" data-i18n="verify"></h2>
+    <p class="vcode" id="vcode" aria-live="polite"></p>
+    <p data-i18n="verifyHint"></p>
+  </div>
   <div class="bar">
     <button class="ctl" id="mic" aria-pressed="false"></button>
     <button class="ctl" id="cam" aria-pressed="false"></button>
@@ -320,6 +326,7 @@
         <button class="ctl" id="fsBtn" aria-pressed="false"></button>
         <button class="ctl" id="devBtn" aria-expanded="false" aria-controls="devPanel"><svg viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="9" cy="7" r="2.2"/><circle cx="15" cy="17" r="2.2"/></svg><span data-i18n="devices"></span></button>
         <button class="ctl" id="infoBtn" aria-expanded="false" aria-controls="infoPanel"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><path d="M12 8h.01"/></svg><span data-i18n="info"></span></button>
+        <button class="ctl" id="verifyBtn" aria-expanded="false" aria-controls="verifyPanel" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg><span data-i18n="verify"></span></button>
       </div>
     </div>
     <button class="ctl hang" id="hang" data-i18n-label="hang"><svg viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(135deg)"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
@@ -370,6 +377,8 @@
       devices: 'Thiết bị', info: 'Thông tin', lblCam: 'Camera', lblMic: 'Micro', lblSpk: 'Loa',
       devDefault: 'Mặc định', devErr: 'Không đổi được thiết bị. Đã thử khôi phục thiết bị cũ.',
       infoTitle: 'Thông tin kết nối', noConn: 'Chưa có kết nối với người kia.',
+      verify: 'Mã xác minh an toàn', verifyNone: 'Chưa có cuộc gọi để xác minh.',
+      verifyHint: 'Trang dựa vào máy chủ báo hiệu công cộng của PeerJS. Hãy đọc dãy số này cho người kia nghe (qua cuộc gọi hoặc kênh khác). Nếu hai bên giống nhau thì không ai chen vào giữa. Nếu khác, hãy kết thúc cuộc gọi.',
       rRoute: 'Đường truyền', rRtt: 'Độ trễ', rOut: 'Video gửi đi', rIn: 'Video nhận về', rLoss: 'Mất gói tin',
       routeHost: 'Trực tiếp, cùng mạng hoặc IPv6 (host)', routeSrflx: 'Trực tiếp qua Internet (P2P)', routeRelay: 'Qua máy chủ TURN',
       needCode: 'Hãy nhập mã phòng.',
@@ -418,6 +427,8 @@
       devices: 'Devices', info: 'Info', lblCam: 'Camera', lblMic: 'Microphone', lblSpk: 'Speaker',
       devDefault: 'Default', devErr: 'Could not switch device. Tried to restore the previous one.',
       infoTitle: 'Connection info', noConn: 'Not connected to the other person yet.',
+      verify: 'Safety verification code', verifyNone: 'No call to verify yet.',
+      verifyHint: 'This page relies on PeerJS’s public signaling server. Read this number to the other person (on the call or another channel). If both match, nobody is in the middle. If not, hang up.',
       rRoute: 'Path', rRtt: 'Latency', rOut: 'Video sent', rIn: 'Video received', rLoss: 'Packet loss',
       routeHost: 'Direct, same network or IPv6 (host)', routeSrflx: 'Direct over the Internet (P2P)', routeRelay: 'Relayed through TURN server',
       needCode: 'Please enter a room code.',
@@ -487,6 +498,7 @@
     $('devErr').textContent = devErrKey ? t(devErrKey) : '';
     loadDevices();
     renderInfo();
+    renderVerify();
     updateViewButtons();
     updateShareButton();
     updateQualityLabels();
@@ -931,7 +943,7 @@
   }
 
   function togglePanel(which) {
-    const map = { dev: [$('devPanel'), $('devBtn')], info: [$('infoPanel'), $('infoBtn')], chat: [$('chatPanel'), $('chatBtn')], react: [$('reactPanel'), $('reactBtn')], more: [$('moreMenu'), $('moreBtn')], yt: [$('ytPanel'), $('ytBtn')] };
+    const map = { dev: [$('devPanel'), $('devBtn')], info: [$('infoPanel'), $('infoBtn')], chat: [$('chatPanel'), $('chatBtn')], react: [$('reactPanel'), $('reactBtn')], more: [$('moreMenu'), $('moreBtn')], yt: [$('ytPanel'), $('ytBtn')], verify: [$('verifyPanel'), $('verifyBtn')] };
     Object.entries(map).forEach(([k, [panel, btn]]) => {
       const on = k === which && !panel.classList.contains('on');
       panel.classList.toggle('on', on);
@@ -944,10 +956,12 @@
     }
     clearInterval(statsTimer);
     if (which === 'info' && $('infoPanel').classList.contains('on')) { statsTimer = setInterval(pollStats, 1000); pollStats(); }
+    renderVerify();
   }
 
   $('devBtn').onclick = () => togglePanel('dev');
   $('infoBtn').onclick = () => togglePanel('info');
+  $('verifyBtn').onclick = () => togglePanel('verify');
   document.addEventListener('keydown', e => { if (e.key === 'Escape') togglePanel(null); });
   $('selCam').onchange = e => switchDevice('video', e.target.value);
   $('selMic').onchange = e => switchDevice('audio', e.target.value);
@@ -1075,6 +1089,8 @@
     updateInvite();
     updateYtState();
     updateTorch();
+    $('verifyBtn').disabled = !startedAt;
+    renderVerify();
   }
 
   // Shared tab audio and the microphone are mixed into ONE audio track with Web Audio. That track replaces the
@@ -1437,7 +1453,7 @@
     if ($('moreMenu').classList.contains('on') && !e.target.closest('#moreMenu, #moreBtn')) closeMenu();
   });
   // Share screen, Picture-in-Picture and Fullscreen are one-shot actions, so the menu closes after them.
-  $('moreMenu').addEventListener('click', e => { if (e.target.closest('#shareBtn, #pipBtn, #fsBtn')) closeMenu(); });
+  $('moreMenu').addEventListener('click', e => { if (e.target.closest('#shareBtn, #pipBtn, #fsBtn, #verifyBtn')) closeMenu(); });
 
   // ---------- Watch together (YouTube) ----------
   // Both people play the same video with YouTube's own embedded player. Only small commands travel over
@@ -1837,6 +1853,26 @@
   $('pwOk').onclick = submitPw;
   $('pwInput').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); submitPw(); } });
   $('pwCancel').onclick = leave;
+
+  // ---------- Safety verification code ----------
+  // Both sides hash the two DTLS certificate fingerprints (from the SDP, sorted so the order is the same
+  // on both) into 20 digits. If someone swapped a fingerprint on the signaling server, the codes differ.
+  async function safetyCode() {
+    const pc = call && call.peerConnection;
+    if (!pc || !pc.localDescription || !pc.remoteDescription || !(window.crypto && crypto.subtle)) return null;
+    const fp = d => { const m = /a=fingerprint:sha-256 ([0-9a-f:]+)/i.exec(d.sdp || ''); return m && m[1].toLowerCase(); };
+    const a = fp(pc.localDescription), b = fp(pc.remoteDescription);
+    if (!a || !b) return null;
+    const h = await crypto.subtle.digest('SHA-256', enc.encode('p2p11-safety|' + [a, b].sort().join('|')));
+    const dv = new DataView(h);
+    return [0, 1, 2, 3].map(i => String(dv.getUint32(i * 4) % 100000).padStart(5, '0')).join(' ');
+  }
+  async function renderVerify() {
+    if (!$('verifyPanel').classList.contains('on')) return;
+    let code = null;
+    try { code = startedAt ? await safetyCode() : null; } catch (_) {}
+    $('vcode').textContent = code || t('verifyNone');
+  }
 
   // ---------- Call timer and join/leave sounds ----------
   try { soundOn = localStorage.getItem('sound') !== '0'; } catch (_) {}
