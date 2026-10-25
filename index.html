@@ -276,6 +276,9 @@
     <h2 id="devTitle" data-i18n="devices"></h2>
     <label><span data-i18n="lblCam"></span><select id="selCam"></select></label>
     <label><span data-i18n="lblMic"></span><select id="selMic"></select></label>
+    <label class="check"><input type="checkbox" id="fxNs"><span data-i18n="lblNs"></span></label>
+    <label class="check"><input type="checkbox" id="fxEc"><span data-i18n="lblEc"></span></label>
+    <label class="check"><input type="checkbox" id="fxAgc"><span data-i18n="lblAgc"></span></label>
     <label id="spkRow"><span data-i18n="lblSpk"></span><select id="selSpk"></select></label>
     <label><span data-i18n="lblQuality"></span><select id="selQuality"></select></label>
     <label class="check"><input type="checkbox" id="muteSharedChk"><span data-i18n="lblMuteShared"></span></label>
@@ -375,6 +378,7 @@
       fullscreen: 'Toàn màn hình', exitFullscreen: 'Thoát toàn màn hình', pip: 'Cửa sổ nổi (PiP)', pipExit: 'Đóng cửa sổ nổi',
       full: 'Phòng đã đầy. Mỗi phòng chỉ cho phép 2 người.',
       devices: 'Thiết bị', info: 'Thông tin', lblCam: 'Camera', lblMic: 'Micro', lblSpk: 'Loa',
+      lblNs: 'Khử ồn micro', lblEc: 'Khử vọng (echo)', lblAgc: 'Tự chỉnh âm lượng micro',
       devDefault: 'Mặc định', devErr: 'Không đổi được thiết bị. Đã thử khôi phục thiết bị cũ.',
       infoTitle: 'Thông tin kết nối', noConn: 'Chưa có kết nối với người kia.',
       verify: 'Mã xác minh an toàn', verifyNone: 'Chưa có cuộc gọi để xác minh.',
@@ -425,6 +429,7 @@
       fullscreen: 'Fullscreen', exitFullscreen: 'Exit fullscreen', pip: 'Picture-in-Picture', pipExit: 'Exit Picture-in-Picture',
       full: 'This room is full. Only 2 people are allowed per room.',
       devices: 'Devices', info: 'Info', lblCam: 'Camera', lblMic: 'Microphone', lblSpk: 'Speaker',
+      lblNs: 'Noise suppression', lblEc: 'Echo cancellation', lblAgc: 'Automatic gain control',
       devDefault: 'Default', devErr: 'Could not switch device. Tried to restore the previous one.',
       infoTitle: 'Connection info', noConn: 'Not connected to the other person yet.',
       verify: 'Safety verification code', verifyNone: 'No call to verify yet.',
@@ -556,6 +561,11 @@
   const makeCode = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), n => alphabet[n % alphabet.length]).join('');
   const clean = s => s.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 
+  // ---------- Microphone processing (noise suppression, echo cancellation, auto gain) ----------
+  const micFx = { noiseSuppression: true, echoCancellation: true, autoGainControl: true };
+  try { const s = JSON.parse(localStorage.getItem('micfx') || '{}'); Object.keys(micFx).forEach(k => { if (typeof s[k] === 'boolean') micFx[k] = s[k]; }); } catch (_) {}
+  const audioConstraints = () => ({ ...micFx });
+
   async function enter(code) {
     room = clean(code);
     if (!room) return showErr('needCode');
@@ -563,7 +573,7 @@
     myPassword = $('roomPw').value.slice(0, 64);
     if (myPassword && !(window.crypto && crypto.subtle)) return showErr('pwNoCrypto');
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: { echoCancellation: true, noiseSuppression: true } });
+      stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: audioConstraints() });
     } catch (e) {
       return showErr('noMedia');
     }
@@ -724,7 +734,7 @@
     // arg is a deviceId string, or { facing: 'user' | 'environment' } for a quick front/back switch
     const open = arg => navigator.mediaDevices.getUserMedia(kind === 'video'
       ? { video: { ...(typeof arg === 'string' ? { deviceId: { exact: arg } } : { facingMode: { exact: arg.facing } }), width: 1280, height: 720 } }
-      : { audio: { deviceId: { exact: arg }, echoCancellation: true, noiseSuppression: true } });
+      : { audio: { deviceId: { exact: arg }, ...audioConstraints() } });
     let ns = null;
     try { ns = await open(facing ? { facing } : id); }
     catch (_) {
@@ -965,6 +975,21 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape') togglePanel(null); });
   $('selCam').onchange = e => switchDevice('video', e.target.value);
   $('selMic').onchange = e => switchDevice('audio', e.target.value);
+  const FX_IDS = { fxNs: 'noiseSuppression', fxEc: 'echoCancellation', fxAgc: 'autoGainControl' };
+  async function applyMicFx() {
+    const tr = stream && stream.getAudioTracks()[0];
+    if (!tr) return;
+    try { await tr.applyConstraints(audioConstraints()); return; } catch (_) {}
+    await switchDevice('audio', $('selMic').value || tr.getSettings().deviceId);
+  }
+  Object.entries(FX_IDS).forEach(([id, key]) => {
+    $(id).checked = micFx[key];
+    $(id).onchange = e => {
+      micFx[key] = e.target.checked;
+      try { localStorage.setItem('micfx', JSON.stringify(micFx)); } catch (_) {}
+      applyMicFx();
+    };
+  });
   $('selSpk').onchange = async e => {
     devErrKey = null;
     try { await $('remote').setSinkId(e.target.value); sinkId = e.target.value; }
