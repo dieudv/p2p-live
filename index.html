@@ -1256,6 +1256,10 @@
     pipLocal.style.display = tr ? 'block' : 'none';
     const rear = $('call').classList.contains('rear');
     pipLocal.style.transform = mirrorOn && !sharing && !rear ? 'scaleX(-1)' : 'none';
+    // flip of the "big" video: remote normally, your own video when swapped
+    const bf = $('call').classList.contains('bigflip');
+    remoteEl.style.scale = bf && !swapped ? '-1 1' : '';
+    pipLocal.style.scale = bf && swapped ? '-1 1' : '';
   }
   setInterval(syncPipLocal, 300); // not tied to tickMeters, which pauses while the main tab is hidden
   // Moves the existing <video> into a small floating window. The browser just composites the same
