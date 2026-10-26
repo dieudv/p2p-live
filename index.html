@@ -402,6 +402,7 @@
       noMedia: 'Không truy cập được camera/mic. Hãy cho phép quyền trong trình duyệt rồi thử lại.',
       creating: 'Đang tạo phòng…', waiting: 'Đang chờ người kia vào… Gửi link cho họ.',
       connecting: 'Đang kết nối…', connected: 'Đã kết nối', left: 'Người kia đã rời phòng',
+      reconnecting: 'Mất kết nối. Đang tự kết nối lại…', reconnected: 'Đã kết nối lại.', recFailed: 'Không kết nối lại được. Hãy vào lại phòng.',
       'peer-unavailable': 'Không tìm thấy phòng. Người tạo phòng có thể đã thoát.',
       network: 'Mất kết nối tới máy chủ báo hiệu.',
       'server-error': 'Máy chủ báo hiệu đang lỗi, hãy thử lại sau.',
@@ -454,6 +455,7 @@
       noMedia: 'Could not access the camera/mic. Allow permission in your browser and try again.',
       creating: 'Creating room…', waiting: 'Waiting for the other person… Send them the link.',
       connecting: 'Connecting…', connected: 'Connected', left: 'The other person left the room',
+      reconnecting: 'Connection lost. Reconnecting…', reconnected: 'Reconnected.', recFailed: 'Could not reconnect. Please rejoin the room.',
       'peer-unavailable': 'Room not found. The host may have left.',
       network: 'Lost connection to the signaling server.',
       'server-error': 'The signaling server has an error, please try again later.',
@@ -570,6 +572,7 @@
   let myPassword = '', roomKeyP = Promise.resolve(null), guestAuth = null, authNonce = '', gateDone = false; // room password
   let failCount = 0, lockUntil = 0, lockLevel = 0;
   const pending = new Map(); // host: connections that have not yet proved they know the password
+  let recovering = false, recTimer = null, graceTimer = null, recTries = 0, sigTries = 0, byeSeen = false, opened = false, probing = false; // auto-reconnect
 
   const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
   const makeCode = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), n => alphabet[n % alphabet.length]).join('');
@@ -610,6 +613,7 @@
   // channel: the host lets exactly one guest in and answers "full" to everyone after that.
   // With a room password the guest must also pass a challenge first (see "Room password" below).
   function startAsHost() {
+    opened = false;
     isHost = true;
     setStatus('creating');
     // Key derived from the password: null = no password, false = failed (nobody is let in).
@@ -617,7 +621,9 @@
       ? deriveKey(myPassword, room).catch(() => { setStatus('pwNoCrypto'); try { peer.destroy(); } catch (_) {} return false; })
       : Promise.resolve(null);
     peer = new Peer(PREFIX + room, PEER_OPTS);
-    peer.on('open', () => { hostReady = true; setStatus('waiting'); updateInvite(); });
+    const me = peer;
+    watchSignal(peer);
+    peer.on('open', () => { if (me !== peer) return; hostReady = true; if (!startedAt) setStatus('waiting'); updateInvite(); });
     peer.on('connection', conn => {
       conn.on('data', d => {
         if (conn === guestConn) onCtl(d);
@@ -642,39 +648,56 @@
       });
     });
     peer.on('call', c => {
-      // Only the admitted guest may call, and only once.
-      if (c.peer !== guestId || (call && call.open)) { c.close(); return; }
+      if (me !== peer) return;
+      if (c.peer !== guestId) { c.close(); return; } // only the admitted guest
+      if (call) { const o = call; call = null; try { o.close(); } catch (_) {} } // guest redialled after a network drop
       c.answer(outStream());
       bind(c);
     });
     peer.on('error', err => {
-      if (err.type === 'unavailable-id') { peer.destroy(); startAsGuest(); }
-      else if (err.type === 'webrtc') showToast(t('webrtc')); // one failed attempt: keep waiting for the next
+      if (me !== peer) return; // late event from a discarded peer
+      if (err.type === 'unavailable-id') { try { me.destroy(); } catch (_) {} startAsGuest(); return; }
+      if (quiet(err)) return;
+      if (err.type === 'webrtc') showToast(t('webrtc'));
       else fail(err);
     });
   }
 
   function startAsGuest() {
-    isHost = false; hostReady = false; guestAuth = null; gateDone = false;
+    isHost = false; hostReady = false; guestAuth = null; gateDone = false; gateConn = null; opened = false;
     setStatus('connecting');
     peer = new Peer(PEER_OPTS);
-    peer.on('open', () => {
-      const conn = peer.connect(PREFIX + room, { reliable: true });
-      gateConn = conn;
-      // The first step needs a working path between the two networks too, so say so if it takes too long.
-      setTimeout(() => { if (!gateDone && !call && $('pwDialog').hidden) setStatus('connectSlow'); }, 20000);
-      conn.on('data', d => onGate(conn, d));
-      conn.on('close', () => { if (!call && !gateDone) { hidePwDialog(); setStatus('gateClosed'); } });
+    watchSignal(peer);
+    peer.on('open', () => { if (recovering) redial(); else if (!gateConn) dialHost(); });
+    peer.on('error', err => {
+      if (quiet(err)) { if (recovering && err.type === 'peer-unavailable') { clearTimeout(recTimer); recTimer = setTimeout(redial, 2500); } return; }
+      fail(err);
     });
-    peer.on('error', err => fail(err));
+  }
+
+  function dialHost() {
+    try { gateConn && gateConn.close(); } catch (_) {}
+    gateDone = false; guestAuth = null;
+    const conn = peer.connect(PREFIX + room, { reliable: true });
+    gateConn = conn;
+    setTimeout(() => { if (!gateDone && !call && !recovering && $('pwDialog').hidden) setStatus('connectSlow'); }, 20000);
+    conn.on('data', d => onGate(conn, d));
+    conn.on('close', () => { if (gateConn === conn && !call && !gateDone) { hidePwDialog(); setStatus(recovering ? 'reconnecting' : 'gateClosed'); } });
   }
 
   function bind(c) {
-    call = c; prev = {};
+    hostTries = 0;
+    call = c; prev = {}; byeSeen = false;
     setTimeout(() => { if (call === c && !startedAt) setStatus('connectSlow'); }, 20000);
-    c.on('stream', s => { $('remote').srcObject = s; setStatus('connected'); startTimer(); setRemoteMeter(s); });
-    c.on('close', () => { $('remote').srcObject = null; setStatus('left'); stopTimer(); stopShare(false); onCtl({ type: 'share', on: false }); setRemoteMeter(null); setHand(false, false); onCtl({ type: 'hand', on: false }); });
-    c.on('error', fail);
+    watchPc(c);
+    c.on('stream', s => { $('remote').srcObject = s; if (!recovering) setStatus('connected'); startTimer(); setRemoteMeter(s); });
+    c.on('close', () => {
+      if (call !== c) return;
+      if (startedAt && !byeSeen && linkLost()) return;
+      peerGone();
+      if (!isHost && byeSeen) waitHost();
+    });
+    c.on('error', e => { if (call !== c || (startedAt && !byeSeen)) return; fail(e); });
   }
 
   function fail(err) {
@@ -682,7 +705,108 @@
     else setStatus('error', err.type || err.message);
   }
 
-  function leave() {
+  // ---------- Auto-reconnect (network switch, flaky link) ----------
+  const quiet = err => (err.type === 'network' && opened) || (recovering && peer && !peer.destroyed);
+
+  function peerGone(key = 'left') {
+    $('remote').srcObject = null; setStatus(key); stopTimer(); stopShare(false);
+    onCtl({ type: 'share', on: false }); setRemoteMeter(null); setHand(false, false); onCtl({ type: 'hand', on: false });
+  }
+  // Signaling socket dropped: the id stays reserved, so reconnect the same Peer with backoff.
+  function watchSignal(p) {
+    p.on('open', () => { opened = true; sigTries = 0; });
+    p.on('disconnected', () => {
+      setTimeout(() => { if (inCall && p === peer && p.disconnected && !p.destroyed) { try { p.reconnect(); } catch (_) {} } }, Math.min(8000, 1000 * ++sigTries));
+    });
+  }
+  function watchPc(c) {
+    const pc = c.peerConnection;
+    if (!pc) return;
+    let again = startedAt != null || recovering, tm = null; // a replacement call announces itself once when it is up
+    const check = () => {
+      clearTimeout(tm);
+      if (call !== c) return;
+      const s = pc.connectionState || pc.iceConnectionState;
+      if (s === 'connected' || s === 'completed') { if (again) { again = false; restored(); } }
+      else if (s === 'failed') { if (startedAt) linkLost(); }
+      else if (s === 'disconnected') tm = setTimeout(() => {
+        const n = pc.connectionState || pc.iceConnectionState;
+        if (call === c && startedAt && n !== 'connected' && n !== 'completed') linkLost();
+      }, 4000);
+    };
+    pc.addEventListener('connectionstatechange', check);
+    pc.addEventListener('iceconnectionstatechange', check);
+  }
+  function linkLost() {
+    if (!inCall || !peer || peer.destroyed) return false;
+    if (recovering) return true;
+    recovering = true; recTries = 0;
+    stopShare(false);
+    onCtl({ type: 'share', on: false }); onCtl({ type: 'hand', on: false }); setRemoteMeter(null);
+    if (call) { const o = call; call = null; try { o.close(); } catch (_) {} }
+    setStatus('reconnecting');
+    clearTimeout(graceTimer);
+    graceTimer = setTimeout(giveUp, 90000);
+    redial();
+    return true;
+  }
+  // The guest drives: same peer id, new gate connection and call. The host only keeps signaling up and waits.
+  function redial() {
+    clearTimeout(recTimer);
+    if (!recovering || !inCall) return;
+    if (!peer || peer.destroyed) return stopRecovery();
+    recTimer = setTimeout(redial, 8000 + 2000 * Math.min(recTries++, 4)); // next attempt if this one does not connect
+    if (!navigator.onLine) return;
+    if (peer.disconnected) { try { peer.reconnect(); } catch (_) {} }
+    if (!isHost && peer.open) {
+      if (call) { const o = call; call = null; try { o.close(); } catch (_) {} }
+      dialHost();
+    }
+  }
+  function stopRecovery() { recovering = false; clearTimeout(recTimer); clearTimeout(graceTimer); }
+  function restored() {
+    stopRecovery();
+    setStatus('connected'); showToast(t('reconnected'));
+    applyQuality(); setTimeout(ytResync, 600);
+    if (myHand) sendCtl({ type: 'hand', on: true });
+  }
+  function giveUp() {
+    if (!recovering) return;
+    stopRecovery();
+    if (call) { const o = call; call = null; try { o.close(); } catch (_) {} }
+    peerGone('recFailed');
+  }
+  // The host hung up: stay in the room and redial quietly, in case it comes back (e.g. from another device).
+  function waitHost() {
+    recovering = true; recTries = 0;
+    clearTimeout(graceTimer); graceTimer = setTimeout(giveUp, 90000);
+    redial();
+  }
+  // After a network change the old path may be dead while the browser still says "connected":
+  // if no media arrives for 2.5 s, treat it as lost.
+  async function probe() {
+    const pc = call && call.peerConnection;
+    if (!pc || recovering || probing) return;
+    probing = true;
+    const bytes = async () => { let n = 0; (await pc.getStats()).forEach(r => { if (r.type === 'inbound-rtp') n += r.bytesReceived; }); return n; };
+    try {
+      const a = await bytes();
+      await new Promise(r => setTimeout(r, 2500));
+      if (call && call.peerConnection === pc && await bytes() === a) linkLost();
+    } catch (_) {}
+    probing = false;
+  }
+  function onNetChange() {
+    if (!inCall) return;
+    if (recovering) redial();
+    else if (startedAt) setTimeout(probe, 1000);
+  }
+  window.addEventListener('online', onNetChange);
+  window.addEventListener('offline', () => { if (startedAt) linkLost(); });
+  if (navigator.connection && navigator.connection.addEventListener) navigator.connection.addEventListener('change', onNetChange);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') onNetChange(); });
+
+  function doLeave() {
     clearInterval(statsTimer);
     try { pipWin && pipWin.close(); } catch (_) {}
     sharingStream && sharingStream.getTracks().forEach(x => x.stop());
@@ -694,6 +818,12 @@
     stream && stream.getTracks().forEach(tr => tr.stop());
     history.replaceState(null, '', location.pathname);
     location.reload();
+  }
+
+  function leave() {
+    inCall = false; stopRecovery(); // no reconnect attempts after a deliberate hang-up
+    const sent = sendCtl({ type: 'bye' }); // lets the other side tell a hang-up from a network drop
+    setTimeout(doLeave, sent ? 200 : 0);
   }
 
   let camMemo = {}, camBusy = false, blackTrack = null;
@@ -1201,6 +1331,7 @@
   }
   function onCtl(d) {
     if (!d) return;
+    if (d.type === 'bye') { byeSeen = true; return; }
     if (d.type === 'chat') return onChat(d);
     if (d.type === 'yt') return onYt(d);
     if (d.type === 'react') return onReact(d);
@@ -2049,6 +2180,7 @@
   }
   async function submitPw() {
     const pw = $('pwInput').value;
+    myPassword = pw;
     if (!pw || !gateConn) return;
     hidePwDialog();
     await sendProof(gateConn, pw);
