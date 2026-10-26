@@ -194,13 +194,19 @@
   .call.swap .lbox { left: 0 !important; top: 0 !important; right: 0 !important; bottom: 0 !important; width: 100% !important; height: 100%; z-index: 0; cursor: default; }
   .call.swap #local { width: 100%; height: 100%; max-height: none; border: 0; border-radius: 0; }
   .call.swap #localGrip { display: none; }
-  .call.swap .flip { top: 64px; right: 12px; bottom: auto; }
-  .call.swap .flip.torch { top: 108px; bottom: auto; }
+  .call.swap .flip { top: 108px; right: 12px; bottom: auto; }
+  .call.swap .flip.torch { top: 152px; bottom: auto; }
   .call.swap #remote { position: absolute; z-index: 2; left: auto; top: auto; right: 16px; bottom: var(--lb); width: var(--lw); height: auto; max-height: 40vh; border: 2px solid rgba(255,255,255,.25); border-radius: 12px; background: #000; cursor: pointer; }
   .call.swap #vuRemote { left: auto; right: calc(var(--lw) - 20px); bottom: calc(var(--lb) + 8px); }
   .call.swap #handRemote { left: auto; right: calc(var(--lw) - 54px); bottom: calc(var(--lb) + 8px); }
   .call.swap #vuLocal { left: 16px; bottom: var(--lb); }
   .call.swap #handLocal { left: 50px; bottom: var(--lb); }
+  .bigflip-btn { position: absolute; z-index: 3; top: 64px; right: 12px; width: 36px; height: 36px; border: 0; border-radius: 50%; padding: 0; display: grid; place-items: center; background: rgba(0,0,0,.55); color: #fff; cursor: pointer; }
+  .bigflip-btn[hidden] { display: none; }
+  .bigflip-btn[aria-pressed="true"] { background: #fff; color: #111; }
+  .bigflip-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+  .bigflip-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .call.bigflip:not(.swap) #remote, .call.bigflip.swap #local { scale: -1 1; } /* composes with the mirror transform */
 </style>
 </head>
 <body>
@@ -279,6 +285,7 @@
   <div class="hand" id="handRemote" aria-hidden="true">✋</div>
   <div class="sr-only" id="live" role="status" aria-live="polite"></div>
   <div class="toast" id="toast" role="status" hidden></div>
+  <button class="bigflip-btn" id="bigFlipBtn" type="button" aria-pressed="false" hidden data-i18n-label="bigFlip"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18"/><path d="M8 7L3 17h5z"/><path d="M16 7l5 10h-5z"/></svg></button>
   <div class="status">
     <span class="pill" id="status"></span>
     <span class="pill" id="timer" role="timer" data-i18n-label="timerLbl" hidden>00:00</span>
@@ -379,7 +386,7 @@
       ytError: 'Video này không phát được (có thể bị tắt nhúng hoặc bị chặn ở khu vực của bạn).',
       lblMuteShared: 'Khi chia sẻ tab, tắt tiếng tab đó trên máy tôi (tránh vọng)', shareAudioOn: 'Đang chia sẻ cả âm thanh của tab.',
       lblQuality: 'Chất lượng video gửi đi', qAuto: 'Tự động', qHigh: 'Cao (720p)', qMedium: 'Trung bình (480p)', qLow: 'Thấp (360p)', qSaver: 'Tiết kiệm dữ liệu (240p)',
-      flipCam: 'Đổi camera trước/sau', flipFail: 'Không đổi được camera.',
+      flipCam: 'Đổi camera trước/sau', flipFail: 'Không đổi được camera.', bigFlip: 'Lật video màn hình lớn',
       inviteTitle: 'Đang chờ người kia vào', inviteSub: 'Gửi link này để mời họ vào phòng:', inviteLinkLbl: 'Link phòng', inviteShare: 'Chia sẻ', inviteCopy: 'Sao chép',
       react: 'Biểu tượng cảm xúc', handRaise: 'Giơ tay', handLower: 'Hạ tay', remoteHandUp: 'Người kia đã giơ tay', remoteHandDown: 'Người kia đã hạ tay',
       install: 'Cài đặt như ứng dụng', iosHint: 'Để cài trên iPhone/iPad: mở bằng Safari, bấm nút Chia sẻ rồi chọn “Thêm vào MH chính”.',
@@ -432,7 +439,7 @@
       ytError: 'This video cannot be played (embedding may be disabled, or it is blocked in your region).',
       lblMuteShared: 'When sharing a tab, mute it on my device (avoids echo)', shareAudioOn: 'Tab audio is being shared too.',
       lblQuality: 'Outgoing video quality', qAuto: 'Auto', qHigh: 'High (720p)', qMedium: 'Medium (480p)', qLow: 'Low (360p)', qSaver: 'Data saver (240p)',
-      flipCam: 'Switch front/back camera', flipFail: 'Could not switch camera.',
+      flipCam: 'Switch front/back camera', flipFail: 'Could not switch camera.', bigFlip: 'Flip main video',
       inviteTitle: 'Waiting for the other person', inviteSub: 'Send them this link to join the room:', inviteLinkLbl: 'Room link', inviteShare: 'Share', inviteCopy: 'Copy',
       react: 'Reactions', handRaise: 'Raise hand', handLower: 'Lower hand', remoteHandUp: 'The other person raised their hand', remoteHandDown: 'The other person lowered their hand',
       install: 'Install as an app', iosHint: 'To install on iPhone/iPad: open in Safari, tap Share, then “Add to Home Screen”.',
@@ -1357,6 +1364,7 @@
     updateTorch();
     $('verifyBtn').disabled = !startedAt;
     renderVerify();
+    $('bigFlipBtn').hidden = !startedAt;
   }
 
   // Shared tab audio and the microphone are mixed into ONE audio track with Web Audio. That track replaces the
@@ -1961,6 +1969,10 @@
     if (was && !swapped) setZoom(null); // back to normal: reset the camera zoom
     updateViewButtons();
   }
+
+  $('bigFlipBtn').onclick = () => {
+    $('bigFlipBtn').setAttribute('aria-pressed', $('call').classList.toggle('bigflip'));
+  };
 
   // ---------- Camera zoom (only while your own video is the big one) ----------
   // Hardware zoom through the track constraints, so the other person sees it too. Pinch on touch screens,
