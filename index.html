@@ -579,7 +579,7 @@
   let myPassword = '', roomKeyP = Promise.resolve(null), guestAuth = null, authNonce = '', gateDone = false; // room password
   let failCount = 0, lockUntil = 0, lockLevel = 0;
   const pending = new Map(); // host: connections that have not yet proved they know the password
-  let recovering = false, recTimer = null, graceTimer = null, recTries = 0, sigTries = 0, byeSeen = false, opened = false, probing = false; // auto-reconnect
+  let recovering = false, recTimer = null, graceTimer = null, recTries = 0, sigTries = 0, byeSeen = false, opened = false, probing = false, hostTries = 0, missTries = 0; // auto-reconnect
 
   const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
   const makeCode = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), n => alphabet[n % alphabet.length]).join('');
@@ -620,6 +620,7 @@
   // channel: the host lets exactly one guest in and answers "full" to everyone after that.
   // With a room password the guest must also pass a challenge first (see "Room password" below).
   function startAsHost() {
+    gateConn = null; guestAuth = null;
     opened = false;
     isHost = true;
     setStatus('creating');
@@ -671,13 +672,20 @@
   }
 
   function startAsGuest() {
+    guestId = null; guestConn = null;
     isHost = false; hostReady = false; guestAuth = null; gateDone = false; gateConn = null; opened = false;
     setStatus('connecting');
     peer = new Peer(PEER_OPTS);
     watchSignal(peer);
     peer.on('open', () => { if (recovering) redial(); else if (!gateConn) dialHost(); });
     peer.on('error', err => {
-      if (quiet(err)) { if (recovering && err.type === 'peer-unavailable') { clearTimeout(recTimer); recTimer = setTimeout(redial, 2500); } return; }
+      if (quiet(err)) {
+        if (recovering && err.type === 'peer-unavailable') {
+          if (++missTries >= 2) takeOver(); // the room id is free: the old host is really gone
+          else { clearTimeout(recTimer); recTimer = setTimeout(redial, 2500); }
+        }
+        return;
+      }
       fail(err);
     });
   }
@@ -693,7 +701,7 @@
   }
 
   function bind(c) {
-    hostTries = 0;
+    hostTries = 0; missTries = 0;
     call = c; prev = {}; byeSeen = false;
     setTimeout(() => { if (call === c && !startedAt) setStatus('connectSlow'); }, 20000);
     watchPc(c);
@@ -702,7 +710,7 @@
       if (call !== c) return;
       if (startedAt && !byeSeen && linkLost()) return;
       peerGone();
-      if (!isHost && byeSeen) waitHost();
+      if (!isHost && byeSeen) setTimeout(takeOver, 1500); // host hung up: take over the room
     });
     c.on('error', e => { if (call !== c || (startedAt && !byeSeen)) return; fail(e); });
   }
@@ -747,7 +755,7 @@
   function linkLost() {
     if (!inCall || !peer || peer.destroyed) return false;
     if (recovering) return true;
-    recovering = true; recTries = 0;
+    recovering = true; recTries = 0; missTries = 0;
     stopShare(false);
     onCtl({ type: 'share', on: false }); onCtl({ type: 'hand', on: false }); setRemoteMeter(null);
     if (call) { const o = call; call = null; try { o.close(); } catch (_) {} }
@@ -783,11 +791,15 @@
     if (call) { const o = call; call = null; try { o.close(); } catch (_) {} }
     peerGone('recFailed');
   }
-  // The host hung up: stay in the room and redial quietly, in case it comes back (e.g. from another device).
-  function waitHost() {
-    recovering = true; recTries = 0;
-    clearTimeout(graceTimer); graceTimer = setTimeout(giveUp, 90000);
-    redial();
+  // The host is gone for good (hung up, or the signaling server released its id): become the host of this room.
+  function takeOver() {
+    if (!inCall || isHost || call) return;
+    stopRecovery(); missTries = 0; hostTries = 0; byeSeen = false;
+    try { gateConn && gateConn.close(); } catch (_) {}
+    gateConn = null;
+    peerGone('creating');
+    try { peer.destroy(); } catch (_) {}
+    startAsHost(); // if the id is still held, unavailable-id sends us back to startAsGuest, which retries
   }
   // After a network change the old path may be dead while the browser still says "connected":
   // if no media arrives for 2.5 s, treat it as lost.
